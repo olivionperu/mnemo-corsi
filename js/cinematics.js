@@ -78,16 +78,18 @@ export class Cinema {
   }
 
   // ---------- entrada a cada recuerdo ----------
-  async roomIntro(memory, number, total) {
+  async roomIntro(memory, number, total, hooks = {}) {
     this.begin('intro');
     $('cine-kicker').textContent = `Recuerdo ${number} de ${total}`;
     $('cine-place').textContent = memory.place;
     await this.hold(0.7);
     await this.type($('cine-lie'), `“${memory.lie}”`, 22);
     $('cine-cite').classList.add('show');
+    hooks.onLie?.();
     await this.hold(0.9);
     $('cine-truth').textContent = memory.truth;
     $('cine-truth').classList.add('show');
+    hooks.onTruth?.();
     await this.hold(Math.min(4.2, 1.8 + memory.truth.length * 0.03));
     await this.end();
   }

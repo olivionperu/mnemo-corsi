@@ -63,6 +63,24 @@ export const ERROR_LINES = [
   'Hasta ella recordaba mejor sus coartadas.',
 ];
 
+// Modo caos: mensajes de ELLA que interrumpen mientras Kevin intenta memorizar.
+export const CHAOS_MESSAGES = [
+  '¿estás molesto?',
+  '¿por qué no contestas?',
+  'ya llegué, bebé (era para mi amiga)',
+  '¿me prestas tu Netflix?',
+  'mi primo te manda saludos',
+  'tenemos que hablar',
+  '¿viste mi historia?',
+  'no es lo que parece',
+  'me quedé sin batería',
+  'estoy en casa de mi amiga',
+  '¿sigues despierto?',
+  'jajaja no, nada',
+  'oye, ¿y tu contraseña del wifi?',
+  'k',
+];
+
 export const PRACTICE = {
   intro: 'Antes de empezar, una práctica. Mira las 2 cajas que se encienden y luego tócalas en el mismo orden. La flecha te ayuda.',
   introInverse: 'Antes de empezar, una práctica. Mira las 2 cajas que se encienden y luego tócalas al revés: primero la última. La flecha te ayuda.',

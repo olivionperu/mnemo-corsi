@@ -7,9 +7,9 @@ import {
 import { Room, DOOR_X, roomCenterZ, playerStartZ, paletteFor } from './world.js';
 import { createPlayer } from './player.js';
 import { Particles, Shake } from './fx.js';
-import { sfx, unlockAudio, isMuted, setMuted } from './audio.js';
+import { sfx, music, unlockAudio, isMuted, setMuted } from './audio.js';
 import { tween, wait, updateTweens, clearTweens, linear, easeInOut } from './tween.js';
-import { MEMORIES, SUCCESS_LINES, ERROR_LINES, PRACTICE, ENDINGS, pick } from './story.js';
+import { MEMORIES, SUCCESS_LINES, ERROR_LINES, CHAOS_MESSAGES, PRACTICE, ENDINGS, pick } from './story.js';
 import { SUS_ITEMS, susScore, susLabel } from './sus.js';
 import { Cinema } from './cinematics.js';
 import * as stats from './stats.js';
@@ -200,6 +200,7 @@ function updateHud() {
   att.setAttribute('aria-label', `Intentos restantes: ${left} de ${ATTEMPTS_PER_SPAN}`);
   att.innerHTML = Array.from({ length: ATTEMPTS_PER_SPAN }, (_, i) => `<i class="${i < left ? '' : 'used'}"></i>`).join('');
   $('presenter-badge').hidden = !game.presenter;
+  $('chaos-badge').hidden = !game.chaos;
 }
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -228,6 +229,8 @@ function showTitle() {
   cinema.abort();
   Object.assign(cam, { zoom: 0, mode: 'normal' });
   hideQuip();
+  clearNotifs();
+  hideThought();
   resetWorld(0);
   ui.exitConfirm.hidden = true;
   showScreen('screen-title');
@@ -238,12 +241,15 @@ function showTitle() {
 // ---------------- flujo del juego ----------------
 function startGame(mode) {
   unlockAudio();
+  music.start();
   sfx.ui();
   game.token++;
   clearTweens();
   cinema.abort();
   Object.assign(cam, { zoom: 0, mode: 'normal' });
   hideQuip();
+  clearNotifs();
+  hideThought();
   resetWorld(0);
   game.introShown = -1;
   game.participant = $('participant').value.trim();
@@ -252,6 +258,7 @@ function startGame(mode) {
     mode, span: START_SPAN, attempt: 1, trials: [], maxSpan: 0,
     startedAt: new Date().toISOString(),
     practice: $('opt-practice').checked,
+    chaos: $('opt-chaos').checked,
     presenterUsed: game.presenter,
   });
   showScreen(null);
@@ -273,7 +280,10 @@ async function showReady(token) {
     setPips(0, 0, false);
     // Acercamiento lento de cámara mientras se lee la frase (se corta si se salta la escena).
     tween(5, (p) => { if (game.state === 'cinematic') cam.zoom = 0.3 * (1 - p); }, easeInOut);
-    await cinema.roomIntro(MEMORIES[game.roomIndex], game.roomIndex + 1, MEMORIES.length);
+    await cinema.roomIntro(MEMORIES[game.roomIndex], game.roomIndex + 1, MEMORIES.length, {
+      onLie: () => think('?!', 2),
+      onTruth: () => think('heart', 2.6),
+    });
     if (!alive(token)) return;
     cam.zoom = 0;
   }
@@ -308,12 +318,13 @@ async function runFinale(won, token) {
   tween(14, (p) => { cam.angle = 0.6 - p * 1.6; }, linear);
   await cinema.finale(won, {
     onWin: () => {
+      think('!', 2.5);
       player.cheer();
       sfx.win();
       const k = player.group.position;
       particles.burst(new THREE.Vector3(k.x, 1.6, k.z), { count: 80, colors: [0xff7eb6, 0xf6d365, 0x9cf07a, 0x8ff0e2], speed: 4, up: 6, life: 1.8 });
     },
-    onLose: () => player.shake(),
+    onLose: () => { player.shake(); think('…', 3); },
   });
   cam.mode = 'normal';
   return alive(token);
@@ -327,9 +338,11 @@ async function runTrial(token) {
   setMessage('Observa las cajas');
   setPips(0, game.span, false);
   await wait(0.7);
+  const chaosAt = game.chaos ? chaosSlots(game.sequence.length) : new Set();
   // Presentación estándar de Corsi: un bloque por segundo.
-  for (const b of game.sequence) {
+  for (const [i, b] of game.sequence.entries()) {
     if (!alive(token)) return;
+    if (chaosAt.has(i)) chaosNotify();
     game.room.lightBlock(b, 'show');
     sfx.show();
     await wait(0.7);
@@ -343,6 +356,78 @@ async function runTrial(token) {
   setMessage(game.mode === 'inverso' ? 'Tu turno: tócalas al revés' : 'Tu turno: tócalas en el mismo orden', 'go');
   setPips(0, game.span, true);
   updateHint();
+  if (game.chaos) {
+    wait(0.8 + Math.random() * 1.5).then(() => {
+      if (alive(token) && game.state === 'input') chaosNotify();
+    });
+  }
+}
+
+// ---------------- modo caos ----------------
+// Elige 1 o 2 momentos de la secuencia para que ELLA interrumpa.
+function chaosSlots(length) {
+  const count = length <= 3 ? 1 : 2;
+  const slots = new Set();
+  while (slots.size < count) slots.add(Math.floor(Math.random() * length));
+  return slots;
+}
+
+let lastChaos = '';
+function chaosNotify() {
+  const box = $('notifs');
+  let text = pick(CHAOS_MESSAGES);
+  if (text === lastChaos) text = pick(CHAOS_MESSAGES);
+  lastChaos = text;
+  const n = document.createElement('div');
+  n.className = 'notif';
+  n.innerHTML = '<span class="avatar"></span><strong>ELLA <small>ahora</small></strong><p></p>';
+  n.querySelector('p').textContent = text;
+  box.prepend(n);
+  while (box.children.length > 3) box.lastChild.remove();
+  requestAnimationFrame(() => n.classList.add('in'));
+  sfx.notify();
+  if (Math.random() < 0.5) think(pick(['?!', '…']), 1.3);
+  setTimeout(() => n.classList.add('out'), 2400);
+  setTimeout(() => n.remove(), 2800);
+}
+
+function clearNotifs() {
+  $('notifs').innerHTML = '';
+}
+
+// ---------------- burbuja de pensamiento ----------------
+const HEART_ROWS = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
+const HEART_CRACK = new Set(['3,0', '2,1', '3,2', '3,3', '4,4']);
+const BROKEN_HEART = `<svg viewBox="0 0 7 6" width="28" height="24" shape-rendering="crispEdges">${
+  HEART_ROWS.flatMap((row, y) => [...row].map((bit, x) => (bit === '1' && !HEART_CRACK.has(`${x},${y}`)
+    ? `<rect x="${x}" y="${y}" width="1" height="1" fill="#c8405e"/>` : ''))).join('')
+}</svg>`;
+const thought = { el: $('thought'), until: 0, pos: new THREE.Vector3() };
+
+function think(kind, seconds = 1.8) {
+  if (kind === 'heart') thought.el.innerHTML = BROKEN_HEART;
+  else thought.el.textContent = kind;
+  thought.el.classList.add('show');
+  thought.until = clock.elapsedTime + seconds;
+}
+
+function hideThought() {
+  thought.until = 0;
+  thought.el.classList.remove('show');
+}
+
+function updateThought() {
+  if (!thought.until) return;
+  if (clock.elapsedTime > thought.until) {
+    hideThought();
+    return;
+  }
+  thought.pos.copy(player.group.position);
+  thought.pos.y += 2.25;
+  thought.pos.x += 0.35;
+  thought.pos.project(camera);
+  thought.el.style.left = `${((thought.pos.x + 1) / 2) * window.innerWidth}px`;
+  thought.el.style.top = `${((1 - thought.pos.y) / 2) * window.innerHeight}px`;
 }
 
 function updateHint() {
@@ -447,6 +532,7 @@ async function finishTrial(correct) {
     game.room.setAllBlocks('win');
     setMessage('¡Correcto!', 'ok');
     showQuip(pick(SUCCESS_LINES), 'ok');
+    think('!', 1.4);
     await wait(1.2);
     if (!alive(token)) return;
     game.room.setAllBlocks(null);
@@ -470,6 +556,7 @@ async function finishTrial(correct) {
   player.shake();
   setMessage('Ese no era', 'bad');
   showQuip(pick(ERROR_LINES), 'bad');
+  think('heart', 2);
   await wait(1.3);
   if (!alive(token)) return;
   await replayCorrect(token);
@@ -555,15 +642,19 @@ function endGame(won) {
     span: game.maxSpan,
     won,
     presenter: game.presenterUsed,
+    chaos: game.chaos,
     trials: game.trials,
   });
+  clearNotifs();
+  hideThought();
   const ending = won ? ENDINGS.win : ENDINGS.lose;
   $('over-kicker').textContent = ending.kicker;
   $('over-text').textContent = game.maxSpan >= START_SPAN ? ending.text : ENDINGS.zero;
   $('over-span').textContent = String(game.maxSpan);
-  $('over-rating').textContent = game.maxSpan >= START_SPAN
-    ? `Tu memoria visoespacial: ${spanRating(game.maxSpan).toLowerCase()} (orden ${game.mode}).`
-    : '';
+  $('over-rating').textContent = [
+    game.maxSpan >= START_SPAN ? `Tu memoria visoespacial: ${spanRating(game.maxSpan).toLowerCase()} (orden ${game.mode}).` : '',
+    game.chaos ? 'Jugaste en modo caos: esta partida no cuenta para el récord.' : '',
+  ].filter(Boolean).join(' ');
   $('over-record').hidden = !isRecord || game.maxSpan === 0;
   $('over-rooms').textContent = String(Math.max(0, game.maxSpan - START_SPAN + 1));
   $('over-accuracy').textContent = `${summary.accuracy}%`;
@@ -609,7 +700,7 @@ const SERIES = {
 };
 
 function showProgress() {
-  const sessions = stats.getSessions().filter((s) => !s.presenter).slice(-20);
+  const sessions = stats.getSessions().filter((s) => !s.presenter && !s.chaos).slice(-20);
   const susScores = stats.getSessions().filter((s) => s.sus).map((s) => s.sus.score);
   const parts = [`${sessions.length} partida${sessions.length === 1 ? '' : 's'} registrada${sessions.length === 1 ? '' : 's'}.`];
   if (stats.getBest('directo')) parts.push(`Mejor en directo: ${stats.getBest('directo')} cajas.`);
@@ -791,8 +882,16 @@ function syncMute() {
 muteBtn.addEventListener('click', () => { setMuted(!isMuted()); syncMute(); });
 syncMute();
 
+const musicBtn = $('btn-music');
+function syncMusic() {
+  musicBtn.setAttribute('aria-pressed', String(!music.isOn()));
+  musicBtn.setAttribute('aria-label', music.isOn() ? 'Apagar música' : 'Encender música');
+}
+musicBtn.addEventListener('click', () => { music.setOn(!music.isOn()); syncMusic(); });
+syncMusic();
+
 // Ayuda para las pruebas automáticas.
-window.__mnemo = { game, pickBlock, camera, onReady, jumpToRoom, setPresenter, cinema };
+window.__mnemo = { game, pickBlock, camera, onReady, jumpToRoom, setPresenter, cinema, chaosNotify, music };
 
 // ---------------- bucle principal ----------------
 const clock = new THREE.Clock();
@@ -809,6 +908,9 @@ function frame() {
   if (hintArrow.visible) {
     hintArrow.position.y = 1.4 + Math.abs(Math.sin(clock.elapsedTime * 5)) * 0.3;
   }
+  // La música baja mientras el jugador memoriza y responde.
+  music.duck(game.state === 'showing' || game.state === 'input' ? 0.2 : 1);
+  updateThought();
   renderer.render(scene, camera);
   if (firstFrame) {
     firstFrame = false;

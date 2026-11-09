@@ -16,6 +16,8 @@ Kevin, programador junior, quedó en visto para siempre. Para olvidarla, primero
 6. Tienes **2 intentos por recuerdo**. Si fallas ambos, el viaje termina y ves tu **amplitud de Corsi**.
 7. Al final puedes responder la encuesta de usabilidad y ver tu evolución en **Mi progreso**.
 
+**Modo caos (opcional):** ELLA te escribe mientras memorizas ("¿estás molesto?", "mi primo te manda saludos"…). Es más difícil y no cuenta para el récord. Los botones **Música** y **Sonido** del HUD apagan cada uno por separado.
+
 ### Modo presentador (para la exposición)
 
 | Tecla | Acción |
@@ -96,6 +98,9 @@ inicio -> listo -> mostrando -> respuesta -> (acierto) -> transición -> listo .
 | Mostrar la secuencia correcta tras un error | Retroalimentación inmediata: el jugador ve qué falló en lugar de solo perder. |
 | Narrativa humorística | El humor mejora la atención y el recuerdo del material (Schmidt, 1994) y aumenta la motivación para repetir el entrenamiento. Las frases están en la tarjeta, no en las cajas, para no contaminar la tarea visoespacial. |
 | Registro de tiempos y aciertos | Permite medir el progreso, como en los estudios de entrenamiento cognitivo (Klingberg et al., 2005; Jaeggi et al., 2008). Se cita la evidencia crítica de Simons et al. (2016) sobre la transferencia limitada. |
+| Música que baja al 20% durante la secuencia | La música da ambiente entre recuerdos, pero mientras el jugador memoriza se reduce para no competir por la atención. |
+| Modo caos opcional (notificaciones de ELLA durante la secuencia) | Demuestra la **interferencia** sobre la memoria de trabajo: la información que llega mientras se retiene otra compite por los mismos recursos atencionales (Baddeley, 1986). Por eso se ofrece aparte, se marca en el CSV y **no cuenta para el récord ni para el gráfico**: el modo normal sigue siendo una medición limpia. Comparar ambos modos con el CSV permite mostrar el efecto en la exposición. |
+| Burbuja de pensamiento sobre Kevin | Retroalimentación emocional inmediata ("?!", "…", corazón roto) que refuerza la narrativa sin tapar el tablero. |
 | Encuesta SUS | Instrumento estándar de usabilidad (Brooke, 1996), interpretado con la escala de Bangor et al. (2009). |
 
 ## Calidad total: aplicación del ciclo PDCA de W. Edwards Deming
@@ -134,7 +139,13 @@ El proyecto se desarrolló en iteraciones cortas usando el ciclo **Planificar, H
   1. Tocar la cinemática para saltarla **reiniciaba la partida**, porque la capa usaba el mismo atributo `data-mode` que los botones de juego. Se limitó el selector a los botones.
   2. Al interrumpir una escena, sus pausas pendientes podían reanudarse dentro de la siguiente. Ahora se descartan.
 
-### Ciclo 5: validación con usuarios (para completar por el equipo)
+### Ciclo 5: música, modo caos y burbuja de pensamiento
+- **Planificar:** hacer el juego más entretenido sin perder la validez de la medición.
+- **Hacer:** música chiptune original generada por código, con volumen reducido durante la secuencia; modo caos opcional con notificaciones de ELLA; burbuja de pensamiento que sigue a Kevin en pantalla.
+- **Verificar:** una prueba automatizada comprobó que la música suena, baja al 20% al memorizar y vuelve al 100% después, que el botón la apaga, que aparecen las notificaciones y la burbuja, y que una partida en modo caos no genera récord. 0 errores.
+- **Actuar:** la prueba detectó un espacio sobrante en el texto del resultado de las partidas en modo caos; se corrigió.
+
+### Ciclo 6: validación con usuarios (para completar por el equipo)
 - **Planificar:** probar con 5 a 10 compañeros, cada uno con un código (P01, P02…).
 - **Hacer:** cada participante juega una partida en cada modo y responde la encuesta SUS.
 - **Verificar:** descargar el CSV desde "Mi progreso" y comparar amplitud, aciertos, tiempos y puntaje SUS promedio.
@@ -157,6 +168,7 @@ Antes de entregar, verifiquen cada referencia y agreguen el DOI.
 - Anguera, J. A., Boccanfuso, J., Rintoul, J. L., Al-Hashimi, O., Faraji, F., Janowich, J., Kong, E., Larraburo, Y., Rolle, C., Johnston, E., & Gazzaley, A. (2013). Video game training enhances cognitive control in older adults. *Nature, 501*(7465), 97–101.
 - Atkinson, R. C., & Shiffrin, R. M. (1968). Human memory: A proposed system and its control processes. En K. W. Spence & J. T. Spence (Eds.), *The psychology of learning and motivation* (Vol. 2, pp. 89–195). Academic Press.
 - Baddeley, A. D., & Hitch, G. (1974). Working memory. En G. H. Bower (Ed.), *The psychology of learning and motivation* (Vol. 8, pp. 47–89). Academic Press.
+- Baddeley, A. (1986). *Working memory*. Oxford University Press.
 - Bangor, A., Kortum, P., & Miller, J. (2009). Determining what individual SUS scores mean: Adding an adjective rating scale. *Journal of Usability Studies, 4*(3), 114–123.
 - Brooke, J. (1996). SUS: A "quick and dirty" usability scale. En P. W. Jordan, B. Thomas, B. A. Weerdmeester, & I. L. McClelland (Eds.), *Usability evaluation in industry* (pp. 189–194). Taylor & Francis.
 - Brunetti, R., Del Gatto, C., & Delogu, F. (2014). eCorsi: Implementation and testing of the Corsi block-tapping task for digital tablets. *Frontiers in Psychology, 5*, Artículo 939.

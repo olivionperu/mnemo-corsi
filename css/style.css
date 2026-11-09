@@ -405,6 +405,71 @@ button, input { font: inherit; color: inherit; }
 .quip[data-tone='ok'] { border-left: 8px solid var(--moss); }
 .quip[data-tone='bad'] { border-left: 8px solid var(--ember); }
 
+.badge-chaos { background: var(--ember); }
+.check small { color: var(--ink-dim); }
+
+/* Notificaciones del modo caos */
+.notifs {
+  position: fixed;
+  top: 92px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(300px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.notif {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  background: #f4ecea;
+  color: var(--night);
+  padding: 10px 12px;
+  box-shadow: var(--px-border);
+  transform: translateX(120%);
+  transition: transform 220ms steps(4), opacity 300ms steps(3);
+}
+.notif.in { transform: translateX(0); }
+.notif.out { opacity: 0; }
+.notif .avatar { width: 28px; height: 28px; grid-row: span 2; }
+.notif strong { font-size: 0.9rem; display: flex; justify-content: space-between; }
+.notif strong small { color: #7d6c80; font-weight: 400; }
+.notif p { margin: 0; font-size: 1rem; line-height: 1.25; }
+
+/* Burbuja de pensamiento de Kevin */
+.thought {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  pointer-events: none;
+  min-width: 46px;
+  padding: 6px 12px;
+  background: #f4ecea;
+  color: var(--night);
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1;
+  box-shadow: var(--px-border);
+  transform: translate(-50%, -100%) scale(0);
+  transform-origin: 30% 100%;
+  transition: transform 160ms steps(3);
+}
+.thought.show { transform: translate(-50%, -100%) scale(1); }
+.thought svg { display: block; margin: 2px auto; }
+/* dos "burbujitas" que bajan hacia la cabeza */
+.thought::before, .thought::after {
+  content: '';
+  position: absolute;
+  background: #f4ecea;
+  box-shadow: 0 0 0 3px var(--line);
+}
+.thought::before { width: 10px; height: 10px; left: 30%; bottom: -18px; }
+.thought::after { width: 6px; height: 6px; left: calc(30% - 10px); bottom: -30px; }
+
 /* ---------- cinemáticas ---------- */
 .cine {
   position: fixed;
@@ -572,6 +637,7 @@ button, input { font: inherit; color: inherit; }
   .chip-sub { display: none; }
   .hud-top { gap: 8px; }
   .result-span strong { font-size: 4.5rem; }
+  .notifs { top: 150px; left: 16px; right: 16px; width: auto; }
   .phone { right: auto; left: 50%; top: 40%; transform: translate(-50%, -50%) translateY(40px); }
   .phone.show { transform: translate(-50%, -50%); }
   .chat { height: 190px; }
@@ -586,5 +652,5 @@ button, input { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .btn { transition: none; }
   .loader-heart, .caret { animation: none; }
-  .cine, .cine-bar, .quip, .phone, .cine-truth { transition: none; }
+  .cine, .cine-bar, .quip, .phone, .cine-truth, .notif, .thought { transition: none; }
 }

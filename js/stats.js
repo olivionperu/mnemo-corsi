@@ -33,7 +33,7 @@ export function recordSession(session) {
   data.sessions.push(session);
   if (data.sessions.length > MAX_SESSIONS) data.sessions = data.sessions.slice(-MAX_SESSIONS);
   // Las partidas con modo presentador no cuentan como récord.
-  const isRecord = !session.presenter && session.span > (data.best[session.mode] ?? 0);
+  const isRecord = !session.presenter && !session.chaos && session.span > (data.best[session.mode] ?? 0);
   if (isRecord) data.best[session.mode] = session.span;
   save();
   return isRecord;
@@ -67,12 +67,12 @@ const csvCell = (v) => {
 };
 
 export function toCSV(sessions) {
-  const header = ['partida', 'participante', 'fecha', 'modo', 'modo_presentador', 'sala', 'bloques', 'intento', 'correcto', 'tiempo_respuesta_ms', 'secuencia', 'respuesta', 'sus'];
+  const header = ['partida', 'participante', 'fecha', 'modo', 'modo_presentador', 'modo_caos', 'sala', 'bloques', 'intento', 'correcto', 'tiempo_respuesta_ms', 'secuencia', 'respuesta', 'sus'];
   const rows = [header.join(',')];
   sessions.forEach((s, n) => {
     for (const t of s.trials) {
       rows.push([
-        n + 1, s.participant, s.date, s.mode, s.presenter ? 1 : 0, t.room, t.span, t.attempt,
+        n + 1, s.participant, s.date, s.mode, s.presenter ? 1 : 0, s.chaos ? 1 : 0, t.room, t.span, t.attempt,
         t.correct ? 1 : 0, t.rtMs, t.sequence, t.response, s.sus?.score ?? '',
       ].map(csvCell).join(','));
     }

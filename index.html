@@ -41,7 +41,9 @@
       </div>
       <div class="hud-actions">
         <span class="badge" id="presenter-badge" hidden>Modo presentador</span>
+        <span class="badge badge-chaos" id="chaos-badge" hidden>Modo caos</span>
         <div class="attempts" id="hud-attempts" role="img" aria-label="Intentos restantes"></div>
+        <button class="icon-btn" id="btn-music" type="button" aria-pressed="false">Música</button>
         <button class="icon-btn" id="btn-mute" type="button" aria-pressed="false">Sonido</button>
         <button class="icon-btn" id="btn-exit" type="button">Salir</button>
       </div>
@@ -54,6 +56,7 @@
     </div>
 
     <p class="quip" id="quip" role="status" aria-live="polite"></p>
+    <div class="notifs" id="notifs" aria-live="polite"></div>
 
     <div class="hud-bottom">
       <div class="ready-panel" id="ready-panel" hidden>
@@ -67,6 +70,9 @@
       <button class="link-btn skip" type="button" id="btn-skip-practice" hidden>Saltar práctica</button>
     </div>
   </div>
+
+  <!-- Burbuja de pensamiento que sigue a Kevin -->
+  <div class="thought" id="thought" aria-hidden="true"></div>
 
   <!-- Cinemáticas -->
   <div class="cine" id="cine" hidden data-mode="intro">
@@ -106,6 +112,7 @@
         <button class="btn" type="button" data-mode="inverso">Jugar en orden inverso</button>
       </div>
       <label class="check"><input type="checkbox" id="opt-practice" checked> Empezar con una práctica guiada</label>
+      <label class="check"><input type="checkbox" id="opt-chaos"> <span>Modo caos: ELLA te escribe mientras memorizas <small>(no cuenta para el récord)</small></span></label>
       <details class="how">
         <summary>Cómo se juega</summary>
         <ol>
