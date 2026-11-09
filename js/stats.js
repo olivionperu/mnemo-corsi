@@ -32,18 +32,49 @@ export const getSessions = () => [...data.sessions];
 export function recordSession(session) {
   data.sessions.push(session);
   if (data.sessions.length > MAX_SESSIONS) data.sessions = data.sessions.slice(-MAX_SESSIONS);
-  const isRecord = session.span > (data.best[session.mode] ?? 0);
+  // Las partidas con modo presentador no cuentan como récord.
+  const isRecord = !session.presenter && session.span > (data.best[session.mode] ?? 0);
   if (isRecord) data.best[session.mode] = session.span;
   save();
   return isRecord;
 }
 
+// Guarda el resultado de la encuesta SUS en la última partida.
+export function attachSus(score, answers) {
+  const last = data.sessions.at(-1);
+  if (!last) return;
+  last.sus = { score, answers };
+  save();
+}
+
+export function getParticipant() {
+  try {
+    return localStorage.getItem('mnemo-participant') || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setParticipant(value) {
+  try {
+    localStorage.setItem('mnemo-participant', value);
+  } catch { /* sin persistencia */ }
+}
+
+const csvCell = (v) => {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
 export function toCSV(sessions) {
-  const header = ['partida', 'fecha', 'modo', 'sala', 'bloques', 'intento', 'correcto', 'tiempo_respuesta_ms', 'secuencia', 'respuesta'];
+  const header = ['partida', 'participante', 'fecha', 'modo', 'modo_presentador', 'sala', 'bloques', 'intento', 'correcto', 'tiempo_respuesta_ms', 'secuencia', 'respuesta', 'sus'];
   const rows = [header.join(',')];
   sessions.forEach((s, n) => {
     for (const t of s.trials) {
-      rows.push([n + 1, s.date, s.mode, t.room, t.span, t.attempt, t.correct ? 1 : 0, t.rtMs, t.sequence, t.response].join(','));
+      rows.push([
+        n + 1, s.participant, s.date, s.mode, s.presenter ? 1 : 0, t.room, t.span, t.attempt,
+        t.correct ? 1 : 0, t.rtMs, t.sequence, t.response, s.sus?.score ?? '',
+      ].map(csvCell).join(','));
     }
   });
   return rows.join('\n');
@@ -54,7 +85,7 @@ export function downloadCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `mnemo-corsi-datos-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `404-amor-no-encontrado-datos-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.append(a);
   a.click();
   a.remove();

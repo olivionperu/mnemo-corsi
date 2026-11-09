@@ -6,13 +6,24 @@ import {
 } from './corsi.js';
 import { Room, DOOR_X, roomCenterZ, playerStartZ, paletteFor } from './world.js';
 import { createPlayer } from './player.js';
+import { Particles, Shake } from './fx.js';
 import { sfx, unlockAudio, isMuted, setMuted } from './audio.js';
 import { tween, wait, updateTweens, clearTweens, linear, easeInOut } from './tween.js';
+import { MEMORIES, SUCCESS_LINES, ERROR_LINES, PRACTICE, ENDINGS, pick } from './story.js';
+import { SUS_ITEMS, susScore, susLabel } from './sus.js';
 import * as stats from './stats.js';
 
+const $ = (id) => document.getElementById(id);
+
 // ---------------- render pixelado ----------------
-const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+const canvas = $('scene');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+} catch {
+  $('loader-text').textContent = 'Tu navegador no tiene WebGL activado. Prueba con Chrome o Edge actualizados.';
+  throw new Error('WebGL no disponible');
+}
 renderer.setPixelRatio(1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.BasicShadowMap; // sombras de borde duro, acordes al estilo pixel
@@ -23,19 +34,19 @@ scene.background = bgColor;
 scene.fog = new THREE.Fog(bgColor, 24, 48);
 
 const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 120);
-scene.add(new THREE.HemisphereLight(0xc8d6ff, 0x2a2238, 1.25));
-const sun = new THREE.DirectionalLight(0xfff1d6, 1.7);
+scene.add(new THREE.HemisphereLight(0xd8d0ff, 0x2a1f30, 1.25));
+const sun = new THREE.DirectionalLight(0xfff1e0, 1.6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(512, 512);
 Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 45 });
 scene.add(sun, sun.target);
 
-let pixelSize = 3;
+const particles = new Particles(scene);
+const shake = new Shake();
 let camFocusZ = 0;
 
 function placeCamera(z) {
-  const portrait = camera.aspect < 0.85;
-  if (portrait) {
+  if (camera.aspect < 0.85) {
     // En vertical se mira casi desde arriba para que la sala ocupe el ancho de la pantalla.
     camera.position.set(-0.4, 19, z + 9);
     camera.lookAt(-0.4, 0, z - 0.2);
@@ -50,7 +61,7 @@ function placeCamera(z) {
 function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  pixelSize = w < 700 ? 2 : 3;
+  const pixelSize = w < 700 ? 2 : 3;
   renderer.setSize(Math.max(1, Math.floor(w / pixelSize)), Math.max(1, Math.floor(h / pixelSize)), false);
   camera.aspect = w / h;
   camera.fov = camera.aspect < 0.85 ? 72 : 42;
@@ -59,16 +70,30 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 
-// ---------------- personaje y salas ----------------
+// ---------------- personaje, salas y flecha guía ----------------
 const player = createPlayer();
 scene.add(player.group);
+
+const hintArrow = new THREE.Group();
+{
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff7eb6 });
+  const parts = [[0.12, 0.3, 0.12, 0.35], [0.46, 0.1, 0.12, 0.15], [0.3, 0.1, 0.12, 0.05], [0.12, 0.1, 0.12, -0.05]];
+  for (const [w, h, d, y] of parts) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.y = y;
+    hintArrow.add(m);
+  }
+  hintArrow.scale.setScalar(1.6);
+  hintArrow.visible = false;
+  scene.add(hintArrow);
+}
 
 function buildRoom(index) {
   return new Room(scene, index, generateLayout(BLOCK_COUNT), START_SPAN + index);
 }
 
 const game = {
-  state: 'title', // title | showing | input | feedback | transition | over
+  state: 'title', // title | ready | showing | input | feedback | transition | over
   mode: 'directo',
   roomIndex: 0,
   span: START_SPAN,
@@ -83,30 +108,43 @@ const game = {
   room: null,
   oldRooms: [],
   startedAt: '',
+  practice: false,
+  presenter: false,
+  presenterUsed: false,
+  participant: '',
 };
 
-function resetWorld() {
+const alive = (token) => token === game.token;
+const inGame = () => ['ready', 'showing', 'input', 'feedback', 'transition'].includes(game.state);
+
+function resetWorld(index = 0) {
+  particles.clear();
   game.room?.dispose();
   game.oldRooms.forEach((r) => r.dispose());
   game.oldRooms = [];
-  game.room = buildRoom(0);
-  player.reset(DOOR_X, playerStartZ(0));
-  camFocusZ = roomCenterZ(0);
-  bgColor.set(paletteFor(0).bg);
-  placeCamera(camFocusZ);
+  game.room = buildRoom(index);
+  game.roomIndex = index;
+  player.reset(DOOR_X, playerStartZ(index));
+  camFocusZ = roomCenterZ(index);
+  bgColor.set(paletteFor(index).bg);
+  hintArrow.visible = false;
 }
 
-const alive = (token) => token === game.token;
-
 // ---------------- interfaz ----------------
-const $ = (id) => document.getElementById(id);
 const ui = {
   hud: $('hud'),
-  title: $('screen-title'),
-  over: $('screen-over'),
+  card: $('room-card'),
   msg: $('hud-msg'),
   pips: $('pips'),
+  skip: $('btn-skip-practice'),
+  exitConfirm: $('exit-confirm'),
+  screens: ['screen-title', 'screen-over', 'screen-progress', 'screen-sus'].map($),
 };
+
+function showScreen(id) {
+  ui.screens.forEach((s) => { s.hidden = s.id !== id; });
+  ui.hud.hidden = id !== null;
+}
 
 function setMessage(text, tone = 'info') {
   ui.msg.textContent = text;
@@ -119,41 +157,46 @@ function setPips(filled, total, active) {
 }
 
 function updateHud() {
-  const pal = paletteFor(game.roomIndex);
+  const mem = MEMORIES[game.roomIndex];
   $('hud-room').textContent = String(game.roomIndex + 1);
-  $('hud-room-name').textContent = pal.name;
+  $('hud-place').textContent = mem.place;
   $('hud-span').textContent = String(game.span);
   $('hud-mode').textContent = game.mode === 'inverso' ? 'orden inverso' : 'orden directo';
-  const left = ATTEMPTS_PER_SPAN - game.attempt + 1;
+  const left = game.practice ? ATTEMPTS_PER_SPAN : ATTEMPTS_PER_SPAN - game.attempt + 1;
   const att = $('hud-attempts');
   att.setAttribute('aria-label', `Intentos restantes: ${left} de ${ATTEMPTS_PER_SPAN}`);
   att.innerHTML = Array.from({ length: ATTEMPTS_PER_SPAN }, (_, i) => `<i class="${i < left ? '' : 'used'}"></i>`).join('');
+  $('presenter-badge').hidden = !game.presenter;
 }
 
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const shortDate = (iso) => new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+
 function renderRecords() {
-  const sessions = stats.getSessions().slice(-4).reverse();
+  const sessions = stats.getSessions().slice(-3).reverse();
   const list = sessions.length
-    ? `<ul>${sessions.map((s) => `<li><span>${new Date(s.date).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}, ${s.mode}</span><span>${s.span} bloques</span></li>`).join('')}</ul>
-       <button class="link-btn" type="button" id="btn-csv-title">Descargar mis datos (CSV)</button>`
+    ? `<ul>${sessions.map((s) => `<li><span>${shortDate(s.date)}, ${s.mode}${s.participant ? `, ${escapeHtml(s.participant)}` : ''}</span><span>${s.span} cajas</span></li>`).join('')}</ul>`
     : '<p>Aún no tienes partidas. Tu primera amplitud aparecerá aquí.</p>';
   $('records').innerHTML = `
     <div class="best">
       <div>Récord directo<strong>${stats.getBest('directo') || '–'}</strong></div>
       <div>Récord inverso<strong>${stats.getBest('inverso') || '–'}</strong></div>
-    </div>${list}`;
-  $('btn-csv-title')?.addEventListener('click', stats.downloadCSV);
+    </div>${list}
+    <div class="records-links">
+      <button class="link-btn" type="button" id="btn-progress">Ver mi progreso</button>
+    </div>`;
+  $('btn-progress').addEventListener('click', () => { sfx.ui(); showProgress(); });
 }
 
 function showTitle() {
   game.token++;
   clearTweens();
   game.state = 'title';
-  resetWorld();
-  ui.hud.hidden = true;
-  ui.over.hidden = true;
-  ui.title.hidden = false;
+  resetWorld(0);
+  ui.exitConfirm.hidden = true;
+  showScreen('screen-title');
   renderRecords();
-  ui.title.querySelector('.btn-primary').focus({ preventScroll: true });
+  $('participant').value = stats.getParticipant();
 }
 
 // ---------------- flujo del juego ----------------
@@ -162,15 +205,44 @@ function startGame(mode) {
   sfx.ui();
   game.token++;
   clearTweens();
-  resetWorld();
+  resetWorld(0);
+  game.participant = $('participant').value.trim();
+  stats.setParticipant(game.participant);
   Object.assign(game, {
-    mode, roomIndex: 0, span: START_SPAN, attempt: 1, trials: [], maxSpan: 0,
+    mode, span: START_SPAN, attempt: 1, trials: [], maxSpan: 0,
     startedAt: new Date().toISOString(),
+    practice: $('opt-practice').checked,
+    presenterUsed: game.presenter,
   });
-  ui.title.hidden = true;
-  ui.over.hidden = true;
-  ui.hud.hidden = false;
+  showScreen(null);
   updateHud();
+  showReady(game.token);
+}
+
+function showReady(token) {
+  if (!alive(token)) return;
+  game.state = 'ready';
+  hintArrow.visible = false;
+  const mem = MEMORIES[game.roomIndex];
+  $('card-kicker').textContent = game.practice ? 'Práctica guiada' : `Recuerdo ${game.roomIndex + 1} de ${MEMORIES.length}`;
+  $('card-place').textContent = mem.place;
+  $('card-lie').textContent = `“${mem.lie}”`;
+  $('card-truth').textContent = game.practice
+    ? (game.mode === 'inverso' ? PRACTICE.introInverse : PRACTICE.intro)
+    : mem.truth;
+  ui.card.hidden = false;
+  ui.skip.hidden = !game.practice;
+  setMessage('');
+  setPips(0, game.span, false);
+  updateHud();
+  $('btn-ready').focus({ preventScroll: true });
+}
+
+function onReady() {
+  if (game.state !== 'ready') return;
+  unlockAudio();
+  sfx.ui();
+  ui.card.hidden = true;
   runTrial(game.token);
 }
 
@@ -179,9 +251,9 @@ async function runTrial(token) {
   game.sequence = generateSequence(game.span, BLOCK_COUNT);
   game.expected = expectedResponse(game.sequence, game.mode);
   game.response = [];
-  setMessage('Observa la secuencia');
+  setMessage('Observa las cajas');
   setPips(0, game.span, false);
-  await wait(1.0);
+  await wait(0.7);
   // Presentación estándar de Corsi: un bloque por segundo.
   for (const b of game.sequence) {
     if (!alive(token)) return;
@@ -195,8 +267,18 @@ async function runTrial(token) {
   if (!alive(token)) return;
   game.state = 'input';
   game.inputStart = performance.now();
-  setMessage(game.mode === 'inverso' ? 'Tu turno: tócalos al revés' : 'Tu turno: tócalos en el mismo orden', 'go');
+  setMessage(game.mode === 'inverso' ? 'Tu turno: tócalas al revés' : 'Tu turno: tócalas en el mismo orden', 'go');
   setPips(0, game.span, true);
+  updateHint();
+}
+
+function updateHint() {
+  const show = game.state === 'input' && (game.practice || game.presenter) && game.response.length < game.expected.length;
+  hintArrow.visible = show;
+  if (show) {
+    const pos = game.room.blockWorldPosition(game.expected[game.response.length]);
+    hintArrow.position.set(pos.x, 1.4, pos.z);
+  }
 }
 
 function pickBlock(index) {
@@ -207,14 +289,67 @@ function pickBlock(index) {
   const result = evaluateStep(game.expected, game.response);
   if (result === 'error') {
     room.lightBlock(index, 'error');
-    wait(0.5).then(() => room.lightBlock(index, null));
-    finishTrial(false);
+    particles.burst(room.blockWorldPosition(index), { count: 10, colors: [0x6a5a70, 0x4b3a50], speed: 2, up: 3, life: 0.8 });
+    wait(0.6).then(() => room.lightBlock(index, null));
+    hintArrow.visible = false;
+    if (game.practice) practiceFailed();
+    else finishTrial(false);
     return;
   }
   sfx.tap();
   room.lightBlock(index, 'tap');
-  wait(0.28).then(() => room.lightBlock(index, null));
-  if (result === 'complete') finishTrial(true);
+  particles.burst(room.blockWorldPosition(index), { count: 6, colors: [0xf6d365, 0xffffff], speed: 1.5, up: 2.5, life: 0.5 });
+  wait(0.25).then(() => room.lightBlock(index, null));
+  updateHint();
+  if (result === 'complete') {
+    if (game.practice) practicePassed();
+    else finishTrial(true);
+  }
+}
+
+async function practicePassed() {
+  const token = game.token;
+  game.state = 'feedback';
+  sfx.success();
+  player.cheer();
+  setMessage(PRACTICE.done, 'ok');
+  await wait(2.4);
+  if (!alive(token)) return;
+  game.practice = false;
+  showReady(token);
+}
+
+async function practiceFailed() {
+  const token = game.token;
+  game.state = 'feedback';
+  sfx.fail();
+  player.shake();
+  setMessage(PRACTICE.retry, 'hint');
+  await wait(1.6);
+  if (alive(token)) runTrial(token);
+}
+
+function skipPractice() {
+  if (!game.practice || !inGame()) return;
+  sfx.ui();
+  game.token++;
+  clearTweens();
+  game.room.setAllBlocks(null);
+  game.practice = false;
+  showReady(game.token);
+}
+
+async function replayCorrect(token) {
+  setMessage(game.mode === 'inverso' ? 'Así tenías que tocarlas (al revés):' : 'Así era la secuencia:', 'hint');
+  await wait(0.5);
+  for (const b of game.expected) {
+    if (!alive(token)) return;
+    game.room.lightBlock(b, 'hint');
+    await wait(0.45);
+    if (!alive(token)) return;
+    game.room.lightBlock(b, null);
+    await wait(0.15);
+  }
 }
 
 async function finishTrial(correct) {
@@ -237,16 +372,15 @@ async function finishTrial(correct) {
     await wait(0.3);
     if (!alive(token)) return;
     game.room.setAllBlocks('win');
-    setMessage(game.span >= MAX_SPAN ? '¡Recordaste las 9 piedras!' : '¡Correcto! La puerta se abre', 'ok');
-    await wait(0.5);
+    setMessage(pick(SUCCESS_LINES), 'ok');
+    await wait(0.9);
     if (!alive(token)) return;
     game.room.setAllBlocks(null);
     if (game.span >= MAX_SPAN) {
-      sfx.door();
-      await tween(0.9, (p) => game.room.setDoorOpen(p));
+      await openDoor(token, true);
       if (!alive(token)) return;
       sfx.win();
-      await wait(0.6);
+      await wait(1.2);
       if (alive(token)) endGame(true);
       return;
     }
@@ -254,37 +388,55 @@ async function finishTrial(correct) {
     if (!alive(token)) return;
     game.span++;
     game.attempt = 1;
-    updateHud();
-    runTrial(token);
+    showReady(token);
     return;
   }
 
   sfx.fail();
+  shake.kick(0.35);
   player.shake();
+  setMessage(pick(ERROR_LINES), 'bad');
+  await wait(1.3);
+  if (!alive(token)) return;
+  await replayCorrect(token);
+  if (!alive(token)) return;
   game.attempt++;
   updateHud();
   if (game.attempt > ATTEMPTS_PER_SPAN) {
-    setMessage('Se acabaron los intentos de esta sala', 'bad');
+    setMessage('Se acabaron los intentos de este recuerdo', 'bad');
     await wait(1.6);
     if (alive(token)) endGame(false);
     return;
   }
-  setMessage('No era ese bloque. Te queda un intento', 'bad');
+  setMessage('Te queda un intento. Ella no te dio ninguno.', 'bad');
   await wait(1.8);
-  if (alive(token)) runTrial(token);
+  if (alive(token)) showReady(token);
+}
+
+async function openDoor(token, big = false) {
+  const room = game.room;
+  sfx.door();
+  shake.kick(big ? 0.4 : 0.18);
+  particles.burst(room.doorWorldPosition, {
+    count: big ? 70 : 34,
+    colors: [0xff7eb6, 0xc8405e, 0xf6d365],
+    speed: big ? 5 : 3.5,
+    up: big ? 6 : 4,
+    life: big ? 1.6 : 1.1,
+  });
+  await tween(0.9, (p) => room.setDoorOpen(p));
 }
 
 async function advanceRoom(token) {
   game.state = 'transition';
-  setMessage('Mnemo avanza a la siguiente sala');
+  setMessage('Kevin avanza al siguiente recuerdo');
   setPips(0, 0, false);
   const old = game.room;
   const nextIndex = game.roomIndex + 1;
   const next = buildRoom(nextIndex);
   game.oldRooms.push(old);
 
-  sfx.door();
-  await tween(0.9, (p) => old.setDoorOpen(p));
+  await openDoor(token);
   if (!alive(token)) return;
   await tween(0.3, (p) => { player.group.rotation.y = Math.PI * p; });
   if (!alive(token)) return;
@@ -300,9 +452,8 @@ async function advanceRoom(token) {
   await tween((z0 - z1) / 3.4, (p) => {
     player.group.position.z = z0 + (z1 - z0) * p;
     camFocusZ = c0 + (c1 - c0) * easeInOut(p);
-    placeCamera(camFocusZ);
     bgColor.copy(bg0).lerp(bg1, p);
-    // Al cruzar la puerta, la sala anterior se desvanece para no tapar la vista.
+    // Al cruzar la puerta, el recuerdo anterior se desvanece para no tapar la vista.
     if (!faded && player.group.position.z < old.backZ - 0.5) {
       faded = true;
       tween(0.7, (q) => old.setOpacity(1 - q), linear).then(() => {
@@ -320,27 +471,173 @@ async function advanceRoom(token) {
 
 function endGame(won) {
   game.state = 'over';
+  hintArrow.visible = false;
   const summary = summarizeTrials(game.trials);
   const isRecord = stats.recordSession({
     date: game.startedAt,
+    participant: game.participant,
     mode: game.mode,
     span: game.maxSpan,
     won,
+    presenter: game.presenterUsed,
     trials: game.trials,
   });
-  ui.hud.hidden = true;
-  $('over-kicker').textContent = won ? 'Llegaste al núcleo de la memoria' : 'Fin del viaje';
+  const ending = won ? ENDINGS.win : ENDINGS.lose;
+  $('over-kicker').textContent = ending.kicker;
+  $('over-text').textContent = game.maxSpan >= START_SPAN ? ending.text : ENDINGS.zero;
   $('over-span').textContent = String(game.maxSpan);
   $('over-rating').textContent = game.maxSpan >= START_SPAN
-    ? `${spanRating(game.maxSpan)} (orden ${game.mode}).`
-    : 'Aún no superas la primera sala. Prueba otra vez con calma.';
+    ? `Tu memoria visoespacial: ${spanRating(game.maxSpan).toLowerCase()} (orden ${game.mode}).`
+    : '';
   $('over-record').hidden = !isRecord || game.maxSpan === 0;
   $('over-rooms').textContent = String(Math.max(0, game.maxSpan - START_SPAN + 1));
   $('over-accuracy').textContent = `${summary.accuracy}%`;
   $('over-rt').textContent = `${(summary.meanRtMs / 1000).toFixed(1)} s`;
-  ui.over.hidden = false;
+  showScreen('screen-over');
   $('btn-again').focus({ preventScroll: true });
 }
+
+// ---------------- modo presentador ----------------
+function setPresenter(on) {
+  game.presenter = on;
+  if (on && inGame()) game.presenterUsed = true;
+  updateHud();
+  updateHint();
+}
+
+function jumpToRoom(index) {
+  if (!inGame() || index < 0 || index >= MEMORIES.length) return;
+  game.token++;
+  clearTweens();
+  resetWorld(index);
+  Object.assign(game, { span: START_SPAN + index, attempt: 1, practice: false, presenterUsed: true });
+  showReady(game.token);
+}
+
+function autoAnswer(correct) {
+  if (game.state !== 'input') return;
+  if (correct) {
+    game.expected.slice(game.response.length).forEach((i) => pickBlock(i));
+  } else {
+    const wrong = [...Array(BLOCK_COUNT).keys()].find((i) => i !== game.expected[game.response.length]);
+    pickBlock(wrong);
+  }
+}
+
+// ---------------- progreso ----------------
+const SERIES = {
+  directo: { color: '#bd8a1a', label: 'Orden directo', shape: 'circle' },
+  inverso: { color: '#e0609a', label: 'Orden inverso', shape: 'square' },
+};
+
+function showProgress() {
+  const sessions = stats.getSessions().filter((s) => !s.presenter).slice(-20);
+  const susScores = stats.getSessions().filter((s) => s.sus).map((s) => s.sus.score);
+  const parts = [`${sessions.length} partida${sessions.length === 1 ? '' : 's'} registrada${sessions.length === 1 ? '' : 's'}.`];
+  if (stats.getBest('directo')) parts.push(`Mejor en directo: ${stats.getBest('directo')} cajas.`);
+  if (stats.getBest('inverso')) parts.push(`Mejor en inverso: ${stats.getBest('inverso')} cajas.`);
+  if (susScores.length) parts.push(`Usabilidad promedio (SUS): ${Math.round(susScores.reduce((a, b) => a + b, 0) / susScores.length)} de 100.`);
+  $('progress-summary').textContent = parts.join(' ');
+  $('chart').innerHTML = sessions.length ? chartSvg(sessions) : '<p class="empty">Aún no hay partidas. Juega una y aquí verás tu curva.</p>';
+  $('legend').innerHTML = Object.values(SERIES).map((s) => `<span><i style="background:${s.color};${s.shape === 'circle' ? 'border-radius:50%' : ''}"></i>${s.label}</span>`).join('');
+  $('progress-table').innerHTML = sessions.length
+    ? `<table><thead><tr><th>#</th><th>Fecha</th><th>Jugador</th><th>Modo</th><th>Cajas</th><th>SUS</th></tr></thead><tbody>${
+      sessions.map((s, i) => `<tr><td>${i + 1}</td><td>${shortDate(s.date)}</td><td>${escapeHtml(s.participant || '–')}</td><td>${s.mode}</td><td>${s.span}</td><td>${s.sus ? s.sus.score : '–'}</td></tr>`).join('')
+    }</tbody></table>`
+    : '';
+  bindChartTooltip(sessions);
+  showScreen('screen-progress');
+  $('btn-progress-back').focus({ preventScroll: true });
+}
+
+function chartSvg(sessions) {
+  const W = 640, H = 260, L = 44, R = 90, T = 14, B = 40;
+  const n = sessions.length;
+  const x = (i) => L + (n === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (n - 1));
+  const y = (v) => T + (1 - v / MAX_SPAN) * (H - T - B);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cajas recordadas por partida">`;
+  for (const v of [0, 3, 6, 9]) {
+    svg += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#3a2c42" stroke-width="1"/>`;
+    svg += `<text x="${L - 10}" y="${y(v) + 5}" fill="#c4b3c4" font-size="13" text-anchor="end">${v}</text>`;
+  }
+  svg += `<text x="${L}" y="${H - 10}" fill="#c4b3c4" font-size="13">Partidas (de la más antigua a la más reciente)</text>`;
+  for (const [mode, s] of Object.entries(SERIES)) {
+    const pts = sessions.map((ses, i) => ({ ses, i })).filter((p) => p.ses.mode === mode);
+    if (!pts.length) continue;
+    if (pts.length > 1) {
+      svg += `<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" points="${pts.map((p) => `${x(p.i)},${y(p.ses.span)}`).join(' ')}"/>`;
+    }
+    for (const p of pts) {
+      const cx = x(p.i), cy = y(p.ses.span);
+      svg += s.shape === 'circle'
+        ? `<circle cx="${cx}" cy="${cy}" r="5" fill="${s.color}" stroke="#1a1424" stroke-width="2"/>`
+        : `<rect x="${cx - 5}" y="${cy - 5}" width="10" height="10" fill="${s.color}" stroke="#1a1424" stroke-width="2"/>`;
+    }
+    const last = pts.at(-1);
+    svg += `<text x="${x(last.i) + 10}" y="${y(last.ses.span) + 4}" fill="#f4ecea" font-size="13">${mode} ${last.ses.span}</text>`;
+  }
+  // Zonas de interacción más grandes que los puntos
+  sessions.forEach((ses, i) => {
+    svg += `<circle class="hit" data-i="${i}" cx="${x(i)}" cy="${y(ses.span)}" r="14" fill="transparent"/>`;
+  });
+  return `${svg}</svg>`;
+}
+
+let tipEl = null;
+function bindChartTooltip(sessions) {
+  const svg = $('chart').querySelector('svg');
+  if (!svg) return;
+  if (!tipEl) {
+    tipEl = document.createElement('div');
+    tipEl.className = 'chart-tip';
+    tipEl.hidden = true;
+    document.body.append(tipEl);
+  }
+  svg.querySelectorAll('.hit').forEach((c) => {
+    c.addEventListener('pointerenter', (e) => {
+      const s = sessions[Number(c.dataset.i)];
+      tipEl.innerHTML = `Partida ${Number(c.dataset.i) + 1}, ${shortDate(s.date)}<br>${s.mode}: <b>${s.span} cajas</b>${s.participant ? `<br>${escapeHtml(s.participant)}` : ''}`;
+      tipEl.hidden = false;
+      tipEl.style.left = `${e.clientX + 14}px`;
+      tipEl.style.top = `${e.clientY - 10}px`;
+    });
+    c.addEventListener('pointerleave', () => { tipEl.hidden = true; });
+  });
+}
+
+// ---------------- encuesta SUS ----------------
+function showSus() {
+  $('sus-list').innerHTML = SUS_ITEMS.map((text, i) => `
+    <li><fieldset style="border:0;margin:0;padding:0"><legend>${text}</legend>
+      <div class="scale">
+        <small>Desacuerdo</small>
+        ${[1, 2, 3, 4, 5].map((v) => `<label><input type="radio" name="q${i}" value="${v}" aria-label="${v}"><span>${v}</span></label>`).join('')}
+        <small>Acuerdo</small>
+      </div></fieldset></li>`).join('');
+  $('sus-error').hidden = true;
+  $('sus-form').hidden = false;
+  $('sus-result').hidden = true;
+  showScreen('screen-sus');
+  $('screen-sus').scrollTop = 0;
+}
+
+$('sus-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const answers = SUS_ITEMS.map((_, i) => Number(form.get(`q${i}`)));
+  if (answers.some((a) => !a)) {
+    $('sus-error').hidden = false;
+    return;
+  }
+  const score = susScore(answers);
+  stats.attachSus(score, answers);
+  sfx.success();
+  $('sus-score').textContent = String(score);
+  $('sus-label').textContent = `Usabilidad ${susLabel(score).toLowerCase()} según la escala SUS.`;
+  $('sus-form').hidden = true;
+  $('sus-result').hidden = false;
+  $('btn-sus-done').focus({ preventScroll: true });
+});
 
 // ---------------- entrada ----------------
 const raycaster = new THREE.Raycaster();
@@ -365,13 +662,43 @@ canvas.addEventListener('pointermove', (e) => {
   canvas.style.cursor = game.state === 'input' && blockAt(e) !== null ? 'pointer' : 'default';
 });
 
+window.addEventListener('keydown', (e) => {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  const key = e.key.toLowerCase();
+  if ((key === ' ' || key === 'enter') && game.state === 'ready' && tag !== 'BUTTON') {
+    e.preventDefault();
+    onReady();
+    return;
+  }
+  if (key === 'escape') ui.exitConfirm.hidden = true;
+  // Modo presentador: P lo activa; C acierta, X falla, 1-8 salta de recuerdo.
+  if (key === 'p') setPresenter(!game.presenter);
+  if (!game.presenter) return;
+  if (key === 'c') autoAnswer(true);
+  if (key === 'x') autoAnswer(false);
+  if (/^[1-8]$/.test(key)) jumpToRoom(Number(key) - 1);
+});
+
 document.querySelectorAll('[data-mode]').forEach((btn) => {
   btn.addEventListener('click', () => startGame(btn.dataset.mode));
 });
+$('btn-ready').addEventListener('click', onReady);
+ui.skip.addEventListener('click', skipPractice);
 $('btn-again').addEventListener('click', () => startGame(game.mode));
 $('btn-home').addEventListener('click', () => { sfx.ui(); showTitle(); });
-$('btn-exit').addEventListener('click', () => { sfx.ui(); showTitle(); });
+$('btn-sus').addEventListener('click', () => { sfx.ui(); showSus(); });
+$('btn-sus-cancel').addEventListener('click', () => { sfx.ui(); showTitle(); });
+$('btn-sus-done').addEventListener('click', () => { sfx.ui(); showTitle(); });
+$('btn-progress-back').addEventListener('click', () => { sfx.ui(); showTitle(); });
 $('btn-csv').addEventListener('click', stats.downloadCSV);
+$('btn-exit').addEventListener('click', () => {
+  sfx.ui();
+  ui.exitConfirm.hidden = false;
+  $('btn-exit-no').focus({ preventScroll: true });
+});
+$('btn-exit-yes').addEventListener('click', () => { sfx.ui(); showTitle(); });
+$('btn-exit-no').addEventListener('click', () => { ui.exitConfirm.hidden = true; });
 
 const muteBtn = $('btn-mute');
 function syncMute() {
@@ -381,18 +708,30 @@ function syncMute() {
 muteBtn.addEventListener('click', () => { setMuted(!isMuted()); syncMute(); });
 syncMute();
 
-// Ayuda para pruebas automáticas y para la demostración en clase.
-window.__mnemo = { game, pickBlock, camera };
+// Ayuda para las pruebas automáticas.
+window.__mnemo = { game, pickBlock, camera, onReady, jumpToRoom, setPresenter };
 
 // ---------------- bucle principal ----------------
 const clock = new THREE.Clock();
+let firstFrame = true;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   updateTweens(dt);
   game.room?.update(dt);
   game.oldRooms.forEach((r) => r.update(dt));
   player.update(dt);
+  particles.update(dt);
+  placeCamera(camFocusZ);
+  camera.position.add(shake.update(dt));
+  if (hintArrow.visible) {
+    hintArrow.position.y = 1.4 + Math.abs(Math.sin(clock.elapsedTime * 5)) * 0.3;
+  }
   renderer.render(scene, camera);
+  if (firstFrame) {
+    firstFrame = false;
+    window.__mnemoReady = true;
+    $('loader').hidden = true;
+  }
   requestAnimationFrame(frame);
 }
 

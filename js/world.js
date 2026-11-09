@@ -10,16 +10,17 @@ export const DOOR_X = 3.8;
 export const DOOR_W = 1.8;
 export const DOOR_H = 2.8;
 
-// Una paleta por sala: el jugador "desciende" hacia el núcleo de la memoria.
+// Una paleta por recuerdo de la relación (ver story.js): del café de la primera cita
+// al verde de terminal del "servidor del olvido".
 export const PALETTES = [
-  { name: 'Vestíbulo de musgo', floor: '#5b7a5e', grout: '#41594a', wall: '#6b6a8a', mortar: '#4b4a66', board: '#3b4a3f', bg: '#17142a', torch: '#ffb55a' },
-  { name: 'Archivo de arena', floor: '#b08a5b', grout: '#8a6a44', wall: '#8c6b4e', mortar: '#664c37', board: '#6e5236', bg: '#1e1420', torch: '#ffc46b' },
-  { name: 'Cripta azul', floor: '#4d6b8c', grout: '#36506b', wall: '#5c5f86', mortar: '#3f4263', board: '#2f405a', bg: '#0f1426', torch: '#7fd8ff' },
-  { name: 'Jardín de cobre', floor: '#6f8e5a', grout: '#526b42', wall: '#a0674a', mortar: '#764a35', board: '#455a37', bg: '#1a1218', torch: '#ffa25a' },
-  { name: 'Bóveda de cristal', floor: '#6e7fa8', grout: '#4f5d80', wall: '#7a6aa8', mortar: '#574a80', board: '#46527a', bg: '#120f24', torch: '#c59bff' },
-  { name: 'Salón de ceniza', floor: '#7c7570', grout: '#5a5450', wall: '#5e5568', mortar: '#433c4c', board: '#4c4642', bg: '#141216', torch: '#ff8a5a' },
-  { name: 'Templo del ocaso', floor: '#a86e5e', grout: '#7e5044', wall: '#6e4a6e', mortar: '#4f344f', board: '#6a4038', bg: '#1a0f1c', torch: '#ffb07a' },
-  { name: 'Núcleo de la memoria', floor: '#3e4f7a', grout: '#2c3858', wall: '#2f2a55', mortar: '#211d3e', board: '#262f4f', bg: '#0a0918', torch: '#8ff0e2' },
+  { floor: '#9a6b4f', grout: '#74503a', wall: '#7a5a6a', mortar: '#56404c', board: '#5c3f33', bg: '#1e1418', torch: '#ffc46b' },
+  { floor: '#3f4f80', grout: '#2c385e', wall: '#3b3a6e', mortar: '#29284f', board: '#2a3358', bg: '#0c0d22', torch: '#7fb8ff' },
+  { floor: '#c27a9a', grout: '#965c76', wall: '#9a5f86', mortar: '#6e4260', board: '#7a4562', bg: '#20101c', torch: '#ffb3d9' },
+  { floor: '#5d3f7a', grout: '#432c5a', wall: '#6a3a7a', mortar: '#4a2856', board: '#3e2a55', bg: '#140a1e', torch: '#ff6ad5' },
+  { floor: '#8c4a44', grout: '#663430', wall: '#7a3a3a', mortar: '#552626', board: '#5c302c', bg: '#1c0c0c', torch: '#ff7a5a' },
+  { floor: '#6e6e74', grout: '#505056', wall: '#5a5a66', mortar: '#3e3e48', board: '#46464e', bg: '#121216', torch: '#d8d8e8' },
+  { floor: '#b06a6a', grout: '#844e4e', wall: '#7a4a8a', mortar: '#583466', board: '#6a3e5a', bg: '#1a0e1e', torch: '#ffb07a' },
+  { floor: '#24402e', grout: '#182c20', wall: '#1e3326', mortar: '#13241a', board: '#163020', bg: '#050c08', torch: '#5cff8a' },
 ];
 
 export const paletteFor = (i) => PALETTES[i % PALETTES.length];
@@ -34,7 +35,11 @@ const PIXEL_DIGITS = [
   ['111', '101', '111', '101', '111'], ['111', '101', '111', '001', '111'],
 ];
 
-const BLOCK_COLORS ={ show: 0x8ff0e2, tap: 0xf6d365, error: 0xf0605a, win: 0x9cf07a };
+const BLOCK_COLORS = { show: 0x8ff0e2, tap: 0xf6d365, error: 0xf0605a, win: 0x9cf07a, hint: 0xff7eb6 };
+const BLOCK_LIFT = { show: 0.32, tap: -0.12, error: 0.05, win: 0.32, hint: 0.2 };
+
+// Corazón de 7x6 píxeles que decora cada caja de recuerdos.
+const HEART = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
 
 function shade(hex, amount) {
   const c = new THREE.Color(hex);
@@ -285,6 +290,15 @@ export class Room {
       g.fillStyle = '#a88a52';
       g.fillRect(0, s - 1, s, 1);
       g.fillRect(s - 1, 0, 1, s);
+      HEART.forEach((row, y) => [...row].forEach((bit, x) => {
+        if (bit === '1') {
+          g.fillStyle = y === 1 && x === 1 ? '#ff9ec4' : '#c8405e';
+          g.fillRect(4 + x, 5 + y, 1, 1);
+        }
+      }));
+      // grieta: el corazón está roto
+      g.fillStyle = '#d8be84';
+      [[7, 5], [6, 6], [7, 7], [7, 8], [8, 9]].forEach(([x, y]) => g.fillRect(x, y, 1, 1));
     });
     layout.forEach((pos, index) => {
       const material = this.material({ map: stone, emissive: 0x000000 });
@@ -307,7 +321,7 @@ export class Room {
     if (kind) {
       b.material.emissive.setHex(BLOCK_COLORS[kind]);
       b.material.emissiveIntensity = 0.85;
-      b.lift = kind === 'error' ? 0.05 : 0.32;
+      b.lift = BLOCK_LIFT[kind];
       this.blockLight.color.setHex(BLOCK_COLORS[kind]);
       this.blockLight.intensity = 9;
       this.blockLight.position.x = b.mesh.position.x;
@@ -327,6 +341,16 @@ export class Room {
     } else {
       this.blockLight.distance = 5;
     }
+  }
+
+  // Posición en el mundo del centro de la puerta (para las partículas).
+  get doorWorldPosition() {
+    return new THREE.Vector3(DOOR_X, DOOR_H / 2, this.backZ);
+  }
+
+  blockWorldPosition(i) {
+    const m = this.blocks[i].mesh;
+    return new THREE.Vector3(m.position.x, m.position.y + 0.4, this.z + m.position.z);
   }
 
   setDoorOpen(p) {

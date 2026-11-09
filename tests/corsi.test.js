@@ -3,8 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createRng, generateSequence, expectedResponse, evaluateStep,
-  generateLayout, spanRating, summarizeTrials, BLOCK_COUNT,
+  generateLayout, spanRating, summarizeTrials, BLOCK_COUNT, START_SPAN, MAX_SPAN,
 } from '../js/corsi.js';
+import { susScore, susLabel } from '../js/sus.js';
+import { MEMORIES } from '../js/story.js';
 
 test('la secuencia tiene la longitud pedida y no repite bloques', () => {
   const rng = createRng(42);
@@ -60,6 +62,30 @@ test('la calificación de amplitud cubre todos los rangos', () => {
   assert.equal(spanRating(4), 'Cerca del promedio, sigue practicando');
   assert.equal(spanRating(5), 'Dentro del promedio adulto');
   assert.equal(spanRating(8), 'Por encima del promedio adulto');
+});
+
+test('SUS: puntajes extremos y uno intermedio', () => {
+  assert.equal(susScore([5, 1, 5, 1, 5, 1, 5, 1, 5, 1]), 100);
+  assert.equal(susScore([1, 5, 1, 5, 1, 5, 1, 5, 1, 5]), 0);
+  assert.equal(susScore([3, 3, 3, 3, 3, 3, 3, 3, 3, 3]), 50);
+  assert.equal(susScore([4, 2, 4, 2, 4, 2, 4, 2, 4, 2]), 75);
+});
+
+test('SUS: rechaza respuestas incompletas o fuera de rango', () => {
+  assert.throws(() => susScore([5, 5]), RangeError);
+  assert.throws(() => susScore([6, 1, 5, 1, 5, 1, 5, 1, 5, 1]), RangeError);
+});
+
+test('SUS: etiquetas de interpretación', () => {
+  assert.equal(susLabel(90), 'Excelente');
+  assert.equal(susLabel(75), 'Buena');
+  assert.equal(susLabel(60), 'Aceptable');
+  assert.equal(susLabel(40), 'Necesita mejoras');
+});
+
+test('hay un recuerdo por cada sala del juego', () => {
+  assert.equal(MEMORIES.length, MAX_SPAN - START_SPAN + 1);
+  MEMORIES.forEach((m) => assert.ok(m.place && m.lie && m.truth));
 });
 
 test('el resumen calcula precisión, tiempo medio y amplitud máxima', () => {

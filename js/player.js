@@ -1,4 +1,4 @@
-// Mnemo: personaje vóxel hecho con cajas, con animaciones de caminar, festejar y negar.
+// Kevin: programador junior vóxel con hoodie, lentes y su laptop siempre encendida.
 import * as THREE from 'three';
 
 const lambert = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
@@ -10,13 +10,17 @@ function box(w, h, d, material) {
 }
 
 export function createPlayer() {
-  const cloak = lambert(0xe0a43a);
-  const cloakDark = lambert(0xb27a22);
-  const skin = lambert(0xf1c9a0);
-  const pants = lambert(0x4b3f72);
-  const boots = lambert(0x2a2238);
-  const eye = lambert(0x1c1830);
-  const lamp = new THREE.MeshLambertMaterial({ color: 0xffe08a, emissive: 0xffc24a, emissiveIntensity: 1.4 });
+  const hoodie = lambert(0x4f63a8);
+  const hoodieDark = lambert(0x3a4a82);
+  const skin = lambert(0xe8b98f);
+  const hair = lambert(0x2a1d16);
+  const jeans = lambert(0x2f3a5a);
+  const shoes = lambert(0xeeeeee);
+  const black = lambert(0x15121f);
+  const lens = new THREE.MeshLambertMaterial({ color: 0xbfefff, emissive: 0x5fb8d0, emissiveIntensity: 0.5 });
+  const silver = lambert(0xb8bcc8);
+  const screen = new THREE.MeshLambertMaterial({ color: 0x8ff0e2, emissive: 0x4fd0c0, emissiveIntensity: 1.3 });
+  const heart = new THREE.MeshBasicMaterial({ color: 0xff7eb6 });
 
   const group = new THREE.Group();
   const body = new THREE.Group();
@@ -25,70 +29,90 @@ export function createPlayer() {
   const makeLeg = (x) => {
     const leg = new THREE.Group();
     leg.position.set(x, 0.55, 0);
-    const thigh = box(0.22, 0.45, 0.24, pants);
+    const thigh = box(0.22, 0.45, 0.24, jeans);
     thigh.position.y = -0.2;
-    const boot = box(0.24, 0.14, 0.3, boots);
-    boot.position.set(0, -0.48, 0.03);
-    leg.add(thigh, boot);
+    const shoe = box(0.25, 0.13, 0.32, shoes);
+    shoe.position.set(0, -0.48, 0.04);
+    leg.add(thigh, shoe);
     return leg;
   };
   const legL = makeLeg(-0.15);
   const legR = makeLeg(0.15);
 
-  const torso = box(0.62, 0.6, 0.38, cloak);
-  torso.position.y = 0.85;
-  const belt = box(0.64, 0.08, 0.4, cloakDark);
-  belt.position.y = 0.6;
+  const torso = box(0.64, 0.62, 0.4, hoodie);
+  torso.position.y = 0.86;
+  const pocket = box(0.4, 0.14, 0.02, hoodieDark);
+  pocket.position.set(0, 0.7, 0.21);
+  const hood = box(0.5, 0.16, 0.18, hoodieDark); // capucha caída en la espalda
+  hood.position.set(0, 1.12, -0.22);
+  const stringL = box(0.03, 0.16, 0.02, shoes);
+  stringL.position.set(-0.08, 1.04, 0.21);
+  const stringR = stringL.clone();
+  stringR.position.x = 0.08;
 
   const head = new THREE.Group();
-  head.position.y = 1.42;
+  head.position.y = 1.44;
   const face = box(0.5, 0.46, 0.46, skin);
-  const hood = box(0.58, 0.22, 0.54, cloak);
-  hood.position.set(0, 0.24, -0.03);
-  const hoodBack = box(0.58, 0.5, 0.14, cloak);
-  hoodBack.position.set(0, 0.02, -0.24);
-  const hoodSideL = box(0.06, 0.4, 0.5, cloak);
-  hoodSideL.position.set(-0.28, 0.02, -0.02);
-  const hoodSideR = hoodSideL.clone();
-  hoodSideR.position.x = 0.28;
-  const eyeL = box(0.08, 0.11, 0.02, eye);
-  eyeL.position.set(-0.11, 0, 0.235);
-  const eyeR = eyeL.clone();
-  eyeR.position.x = 0.11;
-  head.add(face, hood, hoodBack, hoodSideL, hoodSideR, eyeL, eyeR);
+  const hairTop = box(0.54, 0.14, 0.5, hair);
+  hairTop.position.set(0, 0.24, -0.01);
+  const fringe = box(0.54, 0.08, 0.1, hair);
+  fringe.position.set(0, 0.15, 0.21);
+  const hairBack = box(0.54, 0.34, 0.08, hair);
+  hairBack.position.set(0, 0.06, -0.24);
+  // Lentes de programador
+  const frame = box(0.46, 0.04, 0.03, black);
+  frame.position.set(0, 0.04, 0.245);
+  const lensL = box(0.15, 0.11, 0.02, lens);
+  lensL.position.set(-0.11, -0.01, 0.25);
+  const lensR = lensL.clone();
+  lensR.position.x = 0.11;
+  const pupilL = box(0.05, 0.06, 0.02, black);
+  pupilL.position.set(-0.11, -0.01, 0.262);
+  const pupilR = pupilL.clone();
+  pupilR.position.x = 0.11;
+  head.add(face, hairTop, fringe, hairBack, frame, lensL, lensR, pupilL, pupilR);
 
+  // Los brazos sostienen la laptop hacia adelante.
   const makeArm = (x) => {
     const arm = new THREE.Group();
     arm.position.set(x, 1.08, 0);
-    const sleeve = box(0.18, 0.5, 0.2, cloak);
+    const sleeve = box(0.18, 0.5, 0.2, hoodie);
     sleeve.position.y = -0.22;
     const hand = box(0.16, 0.12, 0.18, skin);
     hand.position.y = -0.5;
     arm.add(sleeve, hand);
+    arm.rotation.x = -0.9;
     return arm;
   };
-  const armL = makeArm(-0.41);
-  const armR = makeArm(0.41);
+  const armL = makeArm(-0.42);
+  const armR = makeArm(0.42);
 
-  // Linterna: la memoria ilumina el camino.
-  const lantern = new THREE.Group();
-  lantern.position.set(0, -0.62, 0.05);
-  const handle = box(0.04, 0.1, 0.04, boots);
-  handle.position.y = 0.02;
-  const glass = box(0.18, 0.2, 0.18, lamp);
-  glass.position.y = -0.12;
-  const lanternLight = new THREE.PointLight(0xffc24a, 2.2, 4, 1.5);
-  lanternLight.position.y = -0.12;
-  lantern.add(handle, glass, lanternLight);
-  armR.add(lantern);
+  const laptop = new THREE.Group();
+  laptop.position.set(0, 0.86, 0.5);
+  const base = box(0.6, 0.04, 0.38, silver);
+  // La tapa va en el borde lejano: la pantalla mira a Kevin y la cámara ve
+  // la tapa trasera con un sticker de corazón.
+  const lid = new THREE.Group();
+  lid.position.set(0, 0.02, 0.18);
+  lid.rotation.x = 0.25;
+  const lidBack = box(0.6, 0.38, 0.03, silver);
+  lidBack.position.set(0, 0.19, 0);
+  const display = box(0.54, 0.32, 0.01, screen);
+  display.position.set(0, 0.19, -0.02);
+  const sticker = box(0.12, 0.1, 0.01, heart);
+  sticker.position.set(0, 0.2, 0.02);
+  lid.add(lidBack, display, sticker);
+  const glow = new THREE.PointLight(0x8ff0e2, 2.4, 4, 1.5);
+  glow.position.set(0, 0.3, -0.2);
+  laptop.add(base, lid, glow);
 
-  body.add(legL, legR, torso, belt, head, armL, armR);
+  body.add(legL, legR, torso, pocket, hood, stringL, stringR, head, armL, armR, laptop);
 
   let t = 0;
   let phase = 0;
   let walking = false;
   let cheerT = -1;
-  let shakeT = -1;
+  let sadT = -1;
   let onStep = null;
   let lastStepSign = 1;
 
@@ -100,8 +124,6 @@ export function createPlayer() {
       const s = Math.sin(phase);
       legL.rotation.x = s * 0.7;
       legR.rotation.x = -s * 0.7;
-      armL.rotation.x = -s * 0.6;
-      armR.rotation.x = s * 0.5;
       y = Math.abs(s) * 0.06;
       const sign = Math.sign(s);
       if (sign !== lastStepSign && onStep) onStep();
@@ -110,33 +132,42 @@ export function createPlayer() {
       const k = Math.min(1, dt * 10);
       legL.rotation.x -= legL.rotation.x * k;
       legR.rotation.x -= legR.rotation.x * k;
-      armL.rotation.x -= armL.rotation.x * k;
-      armR.rotation.x -= armR.rotation.x * k;
       y = Math.sin(t * 2.2) * 0.025;
     }
 
+    // Por defecto: mira la laptop y teclea un poco.
+    let armX = -0.9 + Math.sin(t * 14) * (walking ? 0 : 0.04);
+    let laptopY = 0.86;
+    head.rotation.x = 0.12;
+
     if (cheerT >= 0) {
       cheerT += dt;
-      const k = Math.min(1, cheerT / 0.75);
+      const k = Math.min(1, cheerT / 0.8);
       const arc = Math.sin(Math.PI * k);
       y += arc * 0.55;
-      armL.rotation.z = -2.6 * arc;
-      armR.rotation.z = 2.6 * arc;
-      if (k >= 1) {
-        cheerT = -1;
-        armL.rotation.z = armR.rotation.z = 0;
-      }
+      armX = -0.9 - arc * 1.9;
+      laptopY += arc * 0.6;
+      head.rotation.x = 0.12 - arc * 0.4;
+      if (k >= 1) cheerT = -1;
     }
 
-    if (shakeT >= 0) {
-      shakeT += dt;
-      const k = Math.min(1, shakeT / 0.8);
-      head.rotation.y = Math.sin(shakeT * 28) * 0.45 * (1 - k);
+    if (sadT >= 0) {
+      sadT += dt;
+      const k = Math.min(1, sadT / 1.2);
+      const drop = Math.sin(Math.PI * k);
+      head.rotation.x = 0.12 + drop * 0.45;
+      head.rotation.y = Math.sin(sadT * 24) * 0.3 * (1 - k);
+      armX = -0.9 + drop * 0.5;
+      laptopY -= drop * 0.2;
       if (k >= 1) {
-        shakeT = -1;
+        sadT = -1;
         head.rotation.y = 0;
       }
     }
+
+    armL.rotation.x = armX;
+    armR.rotation.x = armX;
+    laptop.position.y = laptopY;
     body.position.y = y;
   }
 
@@ -147,15 +178,14 @@ export function createPlayer() {
       walking = v;
       onStep = stepCallback;
     },
-    cheer() { cheerT = 0; },
-    shake() { shakeT = 0; },
+    cheer() { cheerT = 0; sadT = -1; },
+    shake() { sadT = 0; cheerT = -1; },
     reset(x, z) {
       group.position.set(x, 0, z);
       group.rotation.y = 0;
       walking = false;
-      cheerT = shakeT = -1;
-      head.rotation.y = 0;
-      armL.rotation.z = armR.rotation.z = 0;
+      cheerT = sadT = -1;
+      head.rotation.set(0.12, 0, 0);
     },
   };
 }

@@ -3,61 +3,97 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Mnemo y las puertas de Corsi</title>
-  <meta name="description" content="Juego 3D pixelado para entrenar la memoria visoespacial con la prueba de bloques de Corsi.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%231c1830'/><rect x='2' y='1' width='4' height='6' fill='%237a4a2a'/><rect x='5' y='4' width='1' height='1' fill='%23f6d365'/><rect x='1' y='0' width='6' height='1' fill='%238ff0e2'/></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <title>404: Amor no encontrado</title>
+  <meta name="description" content="Juego 3D pixelado para entrenar la memoria visoespacial con la prueba de bloques de Corsi. Kevin, programador, recorre los recuerdos de su ex.">
+  <meta property="og:title" content="404: Amor no encontrado">
+  <meta property="og:description" content="Para olvidarla, primero tienes que recordar todas sus mentiras. Un juego de memoria basado en la prueba de Corsi.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://olivionperu.github.io/mnemo-corsi/capturas/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 6' shape-rendering='crispEdges'><path fill='%23c8405e' d='M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z'/></svg>">
+  <link rel="preload" href="fonts/pixelify-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    { "imports": { "three": "./vendor/three.module.js" } }
   </script>
 </head>
 <body>
-  <canvas id="scene" aria-label="Sala del juego con bloques de piedra"></canvas>
+  <canvas id="scene" aria-label="Sala del juego con cajas de recuerdos"></canvas>
+
+  <!-- Carga -->
+  <div id="loader" class="loader" role="status">
+    <div class="loader-heart" aria-hidden="true"></div>
+    <p id="loader-text">Cargando recuerdos…</p>
+  </div>
 
   <!-- HUD durante la partida -->
   <div id="hud" class="hud" hidden>
     <div class="hud-top">
       <div class="chip">
-        <span class="chip-label">Sala</span>
-        <strong id="hud-room">1</strong>
-        <span class="chip-sub" id="hud-room-name">Vestíbulo de musgo</span>
+        <span class="chip-label">Recuerdo</span>
+        <strong><span id="hud-room">1</span><small>/8</small></strong>
+        <span class="chip-sub" id="hud-place">La primera cita</span>
       </div>
       <div class="chip">
-        <span class="chip-label">Bloques</span>
+        <span class="chip-label">Cajas</span>
         <strong id="hud-span">2</strong>
         <span class="chip-sub" id="hud-mode">orden directo</span>
       </div>
       <div class="hud-actions">
+        <span class="badge" id="presenter-badge" hidden>Modo presentador</span>
         <div class="attempts" id="hud-attempts" role="img" aria-label="Intentos restantes"></div>
-        <button class="icon-btn" id="btn-mute" type="button" aria-pressed="false" aria-label="Silenciar sonido">Sonido</button>
+        <button class="icon-btn" id="btn-mute" type="button" aria-pressed="false">Sonido</button>
         <button class="icon-btn" id="btn-exit" type="button">Salir</button>
       </div>
     </div>
+
+    <div class="exit-confirm" id="exit-confirm" hidden role="alertdialog" aria-labelledby="exit-q">
+      <p id="exit-q">¿Salir? Se pierde esta partida.</p>
+      <button class="btn btn-small btn-danger" type="button" id="btn-exit-yes">Salir</button>
+      <button class="btn btn-small" type="button" id="btn-exit-no">Seguir jugando</button>
+    </div>
+
+    <div class="room-card" id="room-card" hidden>
+      <p class="room-kicker" id="card-kicker">Recuerdo 1 de 8</p>
+      <h2 class="room-place" id="card-place">La primera cita</h2>
+      <blockquote class="room-lie">
+        <p id="card-lie">“Me encanta que seas programador.”</p>
+        <cite>ELLA</cite>
+      </blockquote>
+      <p class="room-truth" id="card-truth"></p>
+      <button class="btn btn-primary btn-ready" type="button" id="btn-ready">Estoy listo</button>
+      <p class="room-hint">También puedes pulsar Espacio</p>
+    </div>
+
     <div class="hud-bottom">
-      <p id="hud-msg" class="msg" role="status" aria-live="polite">Observa la secuencia</p>
+      <p id="hud-msg" class="msg" role="status" aria-live="polite"></p>
       <div id="pips" class="pips" aria-hidden="true"></div>
+      <button class="link-btn skip" type="button" id="btn-skip-practice" hidden>Saltar práctica</button>
     </div>
   </div>
 
   <!-- Pantalla de inicio -->
-  <section id="screen-title" class="screen">
+  <section id="screen-title" class="screen" hidden>
     <div class="panel">
-      <h1 class="title">Mnemo<span>y las puertas de Corsi</span></h1>
-      <p class="lead">Cada sala guarda una puerta cerrada. Mira qué bloques se encienden, tócalos en el orden correcto y la puerta se abrirá.</p>
+      <h1 class="title">404<span class="title-sub">Amor no encontrado</span></h1>
+      <p class="lead">Kevin, programador junior, quedó en visto para siempre. Para olvidarla, primero tiene que recordar todas sus mentiras.</p>
+      <p class="lead lead-small">Cada sala es un recuerdo. Mira qué cajas se encienden, tócalas en el orden correcto y la puerta se abrirá.</p>
+      <label class="field">
+        <span>Tu nombre o código (opcional)</span>
+        <input id="participant" type="text" maxlength="40" autocomplete="off" placeholder="Ej.: Ana o P07">
+      </label>
       <div class="actions">
         <button class="btn btn-primary" type="button" data-mode="directo">Jugar en orden directo</button>
         <button class="btn" type="button" data-mode="inverso">Jugar en orden inverso</button>
       </div>
+      <label class="check"><input type="checkbox" id="opt-practice" checked> Empezar con una práctica guiada</label>
       <details class="how">
         <summary>Cómo se juega</summary>
         <ol>
-          <li>Los bloques de piedra se encienden uno por uno, a un bloque por segundo.</li>
-          <li>Cuando aparezca "Tu turno", toca los mismos bloques. En orden inverso, empieza por el último.</li>
-          <li>Si aciertas, la puerta se abre y Mnemo pasa a una sala con un bloque más.</li>
-          <li>Tienes 2 intentos por sala. Si fallas ambos, el viaje termina y ves tu amplitud de memoria.</li>
+          <li>Pulsa "Estoy listo". Las cajas se encienden una por una, a una por segundo.</li>
+          <li>Cuando aparezca "Tu turno", toca las mismas cajas. En orden inverso, empieza por la última.</li>
+          <li>Si aciertas, la puerta se abre y Kevin pasa a un recuerdo con una caja más.</li>
+          <li>Tienes 2 intentos por recuerdo. Si fallas ambos, ves tu amplitud de memoria.</li>
         </ol>
       </details>
       <div class="records" id="records"></div>
@@ -70,24 +106,70 @@
       <p class="result-kicker" id="over-kicker">Fin del viaje</p>
       <div class="result-span">
         <strong id="over-span">0</strong>
-        <span>bloques recordados</span>
+        <span>cajas recordadas</span>
       </div>
+      <p class="result-text" id="over-text"></p>
       <p class="result-rating" id="over-rating"></p>
       <p class="result-record" id="over-record" hidden>Nuevo récord en este modo</p>
       <dl class="result-stats">
-        <div><dt>Salas superadas</dt><dd id="over-rooms">0</dd></div>
+        <div><dt>Recuerdos superados</dt><dd id="over-rooms">0</dd></div>
         <div><dt>Aciertos</dt><dd id="over-accuracy">0%</dd></div>
         <div><dt>Respuesta media</dt><dd id="over-rt">0 s</dd></div>
       </dl>
       <div class="actions">
         <button class="btn btn-primary" type="button" id="btn-again">Jugar otra vez</button>
+        <button class="btn" type="button" id="btn-sus">Opinar sobre el juego (1 min)</button>
         <button class="btn" type="button" id="btn-home">Volver al inicio</button>
       </div>
-      <button class="link-btn" type="button" id="btn-csv">Descargar mis datos (CSV)</button>
+    </div>
+  </section>
+
+  <!-- Progreso -->
+  <section id="screen-progress" class="screen" hidden>
+    <div class="panel panel-wide">
+      <h2 class="screen-title">Mi progreso</h2>
+      <p class="lead-small" id="progress-summary"></p>
+      <div class="chart-wrap" id="chart"></div>
+      <div class="legend" id="legend"></div>
+      <details class="how">
+        <summary>Ver tabla de partidas</summary>
+        <div class="table-wrap" id="progress-table"></div>
+      </details>
+      <div class="actions actions-row">
+        <button class="btn" type="button" id="btn-progress-back">Volver</button>
+        <button class="btn" type="button" id="btn-csv">Descargar mis datos (CSV)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Encuesta SUS -->
+  <section id="screen-sus" class="screen" hidden>
+    <form class="panel panel-wide" id="sus-form">
+      <h2 class="screen-title">¿Qué te pareció el juego?</h2>
+      <p class="lead-small">10 afirmaciones. Marca de 1 (totalmente en desacuerdo) a 5 (totalmente de acuerdo).</p>
+      <ol class="sus-list" id="sus-list"></ol>
+      <p class="form-error" id="sus-error" role="alert" hidden>Responde las 10 afirmaciones para ver el resultado.</p>
+      <div class="actions actions-row">
+        <button class="btn btn-primary" type="submit">Enviar respuestas</button>
+        <button class="btn" type="button" id="btn-sus-cancel">Ahora no</button>
+      </div>
+    </form>
+    <div class="panel" id="sus-result" hidden>
+      <h2 class="screen-title">Gracias por opinar</h2>
+      <div class="result-span"><strong id="sus-score">0</strong><span>de 100 en usabilidad</span></div>
+      <p class="result-rating" id="sus-label"></p>
+      <div class="actions"><button class="btn btn-primary" type="button" id="btn-sus-done">Volver al inicio</button></div>
     </div>
   </section>
 
   <noscript><p class="noscript">Este juego necesita JavaScript activado.</p></noscript>
+  <script>
+    // Si el motor 3D no puede arrancar, se explica en la pantalla de carga.
+    window.addEventListener('error', function (e) {
+      var t = document.getElementById('loader-text');
+      if (t && !window.__mnemoReady) t.textContent = 'No se pudo iniciar el juego: ' + (e.message || 'error desconocido') + '. Prueba con Chrome o Edge actualizados.';
+    });
+  </script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
