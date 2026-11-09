@@ -11,6 +11,7 @@ import { sfx, unlockAudio, isMuted, setMuted } from './audio.js';
 import { tween, wait, updateTweens, clearTweens, linear, easeInOut } from './tween.js';
 import { MEMORIES, SUCCESS_LINES, ERROR_LINES, PRACTICE, ENDINGS, pick } from './story.js';
 import { SUS_ITEMS, susScore, susLabel } from './sus.js';
+import { Cinema } from './cinematics.js';
 import * as stats from './stats.js';
 
 const $ = (id) => document.getElementById(id);
@@ -44,8 +45,18 @@ scene.add(sun, sun.target);
 const particles = new Particles(scene);
 const shake = new Shake();
 let camFocusZ = 0;
+// Cámara de cine: camZoom acerca la toma (0 = normal) y 'orbit' gira alrededor de Kevin.
+const cam = { zoom: 0, mode: 'normal', angle: 0 };
+const camTarget = new THREE.Vector3();
 
 function placeCamera(z) {
+  if (cam.mode === 'orbit') {
+    const k = player.group.position;
+    const r = camera.aspect < 0.85 ? 6.5 : 4.6;
+    camera.position.set(k.x + Math.sin(cam.angle) * r, 2.6, k.z + Math.cos(cam.angle) * r);
+    camera.lookAt(k.x, 1.0, k.z);
+    return;
+  }
   if (camera.aspect < 0.85) {
     // En vertical se mira casi desde arriba para que la sala ocupe el ancho de la pantalla.
     camera.position.set(-0.4, 19, z + 9);
@@ -53,6 +64,10 @@ function placeCamera(z) {
   } else {
     camera.position.set(0.6, 12.5, z + 12.5);
     camera.lookAt(0.2, 0, z - 0.9);
+  }
+  if (cam.zoom > 0) {
+    camTarget.set(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(14 * cam.zoom);
+    camera.position.add(camTarget);
   }
   sun.position.set(-6, 15, z + 8);
   sun.target.position.set(0, 0, z);
@@ -112,10 +127,12 @@ const game = {
   presenter: false,
   presenterUsed: false,
   participant: '',
+  introShown: -1,
 };
 
+const cinema = new Cinema();
 const alive = (token) => token === game.token;
-const inGame = () => ['ready', 'showing', 'input', 'feedback', 'transition'].includes(game.state);
+const inGame = () => ['ready', 'showing', 'input', 'feedback', 'transition', 'cinematic'].includes(game.state);
 
 function resetWorld(index = 0) {
   particles.clear();
@@ -133,7 +150,8 @@ function resetWorld(index = 0) {
 // ---------------- interfaz ----------------
 const ui = {
   hud: $('hud'),
-  card: $('room-card'),
+  ready: $('ready-panel'),
+  quip: $('quip'),
   msg: $('hud-msg'),
   pips: $('pips'),
   skip: $('btn-skip-practice'),
@@ -149,6 +167,21 @@ function showScreen(id) {
 function setMessage(text, tone = 'info') {
   ui.msg.textContent = text;
   ui.msg.dataset.tone = tone;
+}
+
+// Mensaje gracioso que aparece unos segundos y se va solo.
+let quipTimer = 0;
+function showQuip(text, tone = 'ok', seconds = 2.8) {
+  clearTimeout(quipTimer);
+  ui.quip.textContent = text;
+  ui.quip.dataset.tone = tone;
+  ui.quip.classList.add('show');
+  sfx.quip();
+  quipTimer = setTimeout(() => ui.quip.classList.remove('show'), seconds * 1000);
+}
+function hideQuip() {
+  clearTimeout(quipTimer);
+  ui.quip.classList.remove('show');
 }
 
 function setPips(filled, total, active) {
@@ -192,6 +225,9 @@ function showTitle() {
   game.token++;
   clearTweens();
   game.state = 'title';
+  cinema.abort();
+  Object.assign(cam, { zoom: 0, mode: 'normal' });
+  hideQuip();
   resetWorld(0);
   ui.exitConfirm.hidden = true;
   showScreen('screen-title');
@@ -205,7 +241,11 @@ function startGame(mode) {
   sfx.ui();
   game.token++;
   clearTweens();
+  cinema.abort();
+  Object.assign(cam, { zoom: 0, mode: 'normal' });
+  hideQuip();
   resetWorld(0);
+  game.introShown = -1;
   game.participant = $('participant').value.trim();
   stats.setParticipant(game.participant);
   Object.assign(game, {
@@ -219,22 +259,34 @@ function startGame(mode) {
   showReady(game.token);
 }
 
-function showReady(token) {
+// Al entrar a un recuerdo nuevo se reproduce la cinemática con la frase de ELLA;
+// en los reintentos se pasa directo al botón "Estoy listo".
+async function showReady(token) {
   if (!alive(token)) return;
-  game.state = 'ready';
   hintArrow.visible = false;
-  const mem = MEMORIES[game.roomIndex];
-  $('card-kicker').textContent = game.practice ? 'Práctica guiada' : `Recuerdo ${game.roomIndex + 1} de ${MEMORIES.length}`;
-  $('card-place').textContent = mem.place;
-  $('card-lie').textContent = `“${mem.lie}”`;
-  $('card-truth').textContent = game.practice
-    ? (game.mode === 'inverso' ? PRACTICE.introInverse : PRACTICE.intro)
-    : mem.truth;
-  ui.card.hidden = false;
+  ui.ready.hidden = true;
+  updateHud();
+  if (!game.practice && game.introShown !== game.roomIndex) {
+    game.state = 'cinematic';
+    game.introShown = game.roomIndex;
+    setMessage('');
+    setPips(0, 0, false);
+    // Acercamiento lento de cámara mientras se lee la frase (se corta si se salta la escena).
+    tween(5, (p) => { if (game.state === 'cinematic') cam.zoom = 0.3 * (1 - p); }, easeInOut);
+    await cinema.roomIntro(MEMORIES[game.roomIndex], game.roomIndex + 1, MEMORIES.length);
+    if (!alive(token)) return;
+    cam.zoom = 0;
+  }
+  game.state = 'ready';
+  $('ready-kicker').textContent = game.practice
+    ? 'Práctica guiada'
+    : `Recuerdo ${game.roomIndex + 1} de ${MEMORIES.length}: ${MEMORIES[game.roomIndex].place}`;
+  $('ready-text').hidden = !game.practice;
+  $('ready-text').textContent = game.mode === 'inverso' ? PRACTICE.introInverse : PRACTICE.intro;
+  ui.ready.hidden = false;
   ui.skip.hidden = !game.practice;
   setMessage('');
   setPips(0, game.span, false);
-  updateHud();
   $('btn-ready').focus({ preventScroll: true });
 }
 
@@ -242,8 +294,29 @@ function onReady() {
   if (game.state !== 'ready') return;
   unlockAudio();
   sfx.ui();
-  ui.card.hidden = true;
+  ui.ready.hidden = true;
   runTrial(game.token);
+}
+
+async function runFinale(won, token) {
+  game.state = 'cinematic';
+  hintArrow.visible = false;
+  hideQuip();
+  ui.hud.hidden = true;
+  cam.mode = 'orbit';
+  cam.angle = 0.6;
+  tween(14, (p) => { cam.angle = 0.6 - p * 1.6; }, linear);
+  await cinema.finale(won, {
+    onWin: () => {
+      player.cheer();
+      sfx.win();
+      const k = player.group.position;
+      particles.burst(new THREE.Vector3(k.x, 1.6, k.z), { count: 80, colors: [0xff7eb6, 0xf6d365, 0x9cf07a, 0x8ff0e2], speed: 4, up: 6, life: 1.8 });
+    },
+    onLose: () => player.shake(),
+  });
+  cam.mode = 'normal';
+  return alive(token);
 }
 
 async function runTrial(token) {
@@ -372,16 +445,16 @@ async function finishTrial(correct) {
     await wait(0.3);
     if (!alive(token)) return;
     game.room.setAllBlocks('win');
-    setMessage(pick(SUCCESS_LINES), 'ok');
-    await wait(0.9);
+    setMessage('¡Correcto!', 'ok');
+    showQuip(pick(SUCCESS_LINES), 'ok');
+    await wait(1.2);
     if (!alive(token)) return;
     game.room.setAllBlocks(null);
     if (game.span >= MAX_SPAN) {
       await openDoor(token, true);
       if (!alive(token)) return;
-      sfx.win();
-      await wait(1.2);
-      if (alive(token)) endGame(true);
+      await wait(0.6);
+      if (alive(token) && await runFinale(true, token)) endGame(true);
       return;
     }
     await advanceRoom(token);
@@ -395,7 +468,8 @@ async function finishTrial(correct) {
   sfx.fail();
   shake.kick(0.35);
   player.shake();
-  setMessage(pick(ERROR_LINES), 'bad');
+  setMessage('Ese no era', 'bad');
+  showQuip(pick(ERROR_LINES), 'bad');
   await wait(1.3);
   if (!alive(token)) return;
   await replayCorrect(token);
@@ -404,11 +478,12 @@ async function finishTrial(correct) {
   updateHud();
   if (game.attempt > ATTEMPTS_PER_SPAN) {
     setMessage('Se acabaron los intentos de este recuerdo', 'bad');
-    await wait(1.6);
-    if (alive(token)) endGame(false);
+    await wait(1.4);
+    if (alive(token) && await runFinale(false, token)) endGame(false);
     return;
   }
-  setMessage('Te queda un intento. Ella no te dio ninguno.', 'bad');
+  setMessage('Te queda un intento', 'bad');
+  showQuip('Ella no te dio ninguno.', 'bad', 2.2);
   await wait(1.8);
   if (alive(token)) showReady(token);
 }
@@ -509,6 +584,9 @@ function jumpToRoom(index) {
   if (!inGame() || index < 0 || index >= MEMORIES.length) return;
   game.token++;
   clearTweens();
+  cinema.abort();
+  Object.assign(cam, { zoom: 0, mode: 'normal' });
+  hideQuip();
   resetWorld(index);
   Object.assign(game, { span: START_SPAN + index, attempt: 1, practice: false, presenterUsed: true });
   showReady(game.token);
@@ -666,6 +744,11 @@ window.addEventListener('keydown', (e) => {
   const tag = e.target.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   const key = e.key.toLowerCase();
+  if ((key === ' ' || key === 'enter') && cinema.active) {
+    e.preventDefault();
+    cinema.skip();
+    return;
+  }
   if ((key === ' ' || key === 'enter') && game.state === 'ready' && tag !== 'BUTTON') {
     e.preventDefault();
     onReady();
@@ -680,7 +763,7 @@ window.addEventListener('keydown', (e) => {
   if (/^[1-8]$/.test(key)) jumpToRoom(Number(key) - 1);
 });
 
-document.querySelectorAll('[data-mode]').forEach((btn) => {
+document.querySelectorAll('button[data-mode]').forEach((btn) => {
   btn.addEventListener('click', () => startGame(btn.dataset.mode));
 });
 $('btn-ready').addEventListener('click', onReady);
@@ -709,7 +792,7 @@ muteBtn.addEventListener('click', () => { setMuted(!isMuted()); syncMute(); });
 syncMute();
 
 // Ayuda para las pruebas automáticas.
-window.__mnemo = { game, pickBlock, camera, onReady, jumpToRoom, setPresenter };
+window.__mnemo = { game, pickBlock, camera, onReady, jumpToRoom, setPresenter, cinema };
 
 // ---------------- bucle principal ----------------
 const clock = new THREE.Clock();

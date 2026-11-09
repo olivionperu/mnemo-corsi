@@ -10,7 +10,7 @@ Kevin, programador junior, quedó en visto para siempre. Para olvidarla, primero
 
 1. Escribe tu nombre o código (opcional) y elige **orden directo** u **orden inverso**.
 2. La primera vez hay una **práctica guiada**: una flecha señala qué caja tocar.
-3. Cada recuerdo muestra una tarjeta con la frase de ELLA. Pulsa **Estoy listo** (o Espacio) cuando quieras empezar.
+3. Al entrar a cada recuerdo, una cinemática muestra la frase de ELLA y la verdad. Luego pulsa **Estoy listo** (o Espacio).
 4. Las cajas se encienden a razón de **una por segundo**, como en el protocolo estándar. Luego aparece "Tu turno".
 5. Si aciertas, la puerta se abre con una lluvia de corazones rotos. Si fallas, el juego te muestra la secuencia correcta.
 6. Tienes **2 intentos por recuerdo**. Si fallas ambos, el viaje termina y ves tu **amplitud de Corsi**.
@@ -126,7 +126,15 @@ El proyecto se desarrolló en iteraciones cortas usando el ciclo **Planificar, H
   2. La fuente pixel dibujaba mal la ligadura "fl" ("flecha" se leía "Aecha"). Se desactivaron las ligaduras.
   3. En el celular se mostraba "pulsa Espacio", que no aplica a pantallas táctiles. Se oculta en dispositivos táctiles.
 
-### Ciclo 4: validación con usuarios (para completar por el equipo)
+### Ciclo 4: cinemáticas y ritmo
+- **Planificar:** las frases de ELLA debían aparecer unos segundos y desaparecer, y el juego necesitaba un cierre narrativo.
+- **Hacer:** se agregó una cinemática de entrada por recuerdo (barras de cine, acercamiento de cámara y la frase escrita letra por letra), mensajes graciosos flotantes que se van solos, y dos finales con el chat de ELLA en el celular de Kevin y la cámara girando a su alrededor. Todas se pueden saltar.
+- **Verificar:** una prueba de extremo a extremo recorrió ambos finales en escritorio y móvil, sin internet y sin errores.
+- **Actuar:** la prueba encontró 2 defectos, que se corrigieron:
+  1. Tocar la cinemática para saltarla **reiniciaba la partida**, porque la capa usaba el mismo atributo `data-mode` que los botones de juego. Se limitó el selector a los botones.
+  2. Al interrumpir una escena, sus pausas pendientes podían reanudarse dentro de la siguiente. Ahora se descartan.
+
+### Ciclo 5: validación con usuarios (para completar por el equipo)
 - **Planificar:** probar con 5 a 10 compañeros, cada uno con un código (P01, P02…).
 - **Hacer:** cada participante juega una partida en cada modo y responde la encuesta SUS.
 - **Verificar:** descargar el CSV desde "Mi progreso" y comparar amplitud, aciertos, tiempos y puntaje SUS promedio.

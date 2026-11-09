@@ -53,23 +53,42 @@
       <button class="btn btn-small" type="button" id="btn-exit-no">Seguir jugando</button>
     </div>
 
-    <div class="room-card" id="room-card" hidden>
-      <p class="room-kicker" id="card-kicker">Recuerdo 1 de 8</p>
-      <h2 class="room-place" id="card-place">La primera sospecha</h2>
-      <blockquote class="room-lie">
-        <p id="card-lie">“Solo es un amigo.”</p>
-        <cite>ELLA</cite>
-      </blockquote>
-      <p class="room-truth" id="card-truth"></p>
-      <button class="btn btn-primary btn-ready" type="button" id="btn-ready">Estoy listo</button>
-      <p class="room-hint">También puedes pulsar Espacio</p>
-    </div>
+    <p class="quip" id="quip" role="status" aria-live="polite"></p>
 
     <div class="hud-bottom">
+      <div class="ready-panel" id="ready-panel" hidden>
+        <p class="ready-kicker" id="ready-kicker">Recuerdo 1 de 8</p>
+        <p class="ready-text" id="ready-text" hidden></p>
+        <button class="btn btn-primary btn-ready" type="button" id="btn-ready">Estoy listo</button>
+        <p class="room-hint">También puedes pulsar Espacio</p>
+      </div>
       <p id="hud-msg" class="msg" role="status" aria-live="polite"></p>
       <div id="pips" class="pips" aria-hidden="true"></div>
       <button class="link-btn skip" type="button" id="btn-skip-practice" hidden>Saltar práctica</button>
     </div>
+  </div>
+
+  <!-- Cinemáticas -->
+  <div class="cine" id="cine" hidden data-mode="intro">
+    <div class="cine-bar cine-top"></div>
+    <div class="cine-bar cine-bottom"></div>
+    <div class="cine-intro" aria-live="polite">
+      <p class="cine-kicker" id="cine-kicker"></p>
+      <h2 class="cine-place" id="cine-place"></h2>
+      <p class="cine-lie" id="cine-lie"></p>
+      <p class="cine-cite" id="cine-cite">ELLA</p>
+      <p class="cine-truth" id="cine-truth"></p>
+    </div>
+    <div class="phone" id="phone" aria-live="polite">
+      <div class="phone-head">
+        <span class="avatar" aria-hidden="true"></span>
+        <div><strong>ELLA</strong><span id="phone-status">en línea</span></div>
+      </div>
+      <div class="chat" id="chat"></div>
+      <div class="composer"><span id="composer"></span><i class="caret" aria-hidden="true"></i></div>
+    </div>
+    <p class="cine-caption" id="cine-caption"></p>
+    <p class="cine-skip">Toca<span class="key-only"> o pulsa Espacio</span> para saltar</p>
   </div>
 
   <!-- Pantalla de inicio -->

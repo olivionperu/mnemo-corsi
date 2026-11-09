@@ -51,6 +51,13 @@ export const sfx = {
   },
   step: () => tone(120, 0.05, { type: 'square', vol: 0.025 }),
   ui: () => tone(880, 0.05, { vol: 0.04 }),
+  notify: () => {
+    tone(988, 0.09, { type: 'triangle', vol: 0.09 });
+    tone(1319, 0.14, { type: 'triangle', vol: 0.09, delay: 0.09 });
+  },
+  key: () => tone(1800 + Math.random() * 300, 0.025, { vol: 0.018 }),
+  send: () => tone(500, 0.16, { type: 'triangle', to: 1200, vol: 0.06 }),
+  quip: () => tone(740, 0.06, { type: 'triangle', vol: 0.05 }),
   win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.25, { delay: i * 0.12, vol: 0.08, type: 'triangle' })),
 };
 
