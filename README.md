@@ -2,6 +2,8 @@
 
 Juego web 3D con estética pixel art para entrenar la **memoria de trabajo visoespacial**. Está basado en la prueba de bloques de Corsi (Corsi, 1972; Milner, 1971).
 
+**Jugar en línea:** https://olivionperu.github.io/mnemo-corsi/
+
 Mnemo, un explorador con linterna, recorre 8 salas. En cada sala, unos bloques de piedra se encienden en secuencia. Si el jugador los toca en el orden correcto, la puerta se abre y Mnemo avanza a la siguiente sala, donde la secuencia tiene un bloque más.
 
 ## Cómo se juega
