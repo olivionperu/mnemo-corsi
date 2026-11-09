@@ -147,7 +147,13 @@ El proyecto se desarrolló en iteraciones cortas usando el ciclo **Planificar, H
 - **Verificar:** una prueba automatizada comprobó que la música suena, baja al 20% al memorizar y vuelve al 100% después, que el botón la apaga, que aparecen las notificaciones y la burbuja, y que una partida en modo caos no genera récord. 0 errores.
 - **Actuar:** la prueba detectó un espacio sobrante en el texto del resultado de las partidas en modo caos; se corrigió.
 
-### Ciclo 6: validación con usuarios (para completar por el equipo)
+### Ciclo 6: menú principal y créditos
+- **Planificar:** el autor reportó, jugando, que un chiste de acierto se repetía en todos los niveles; además pidió un menú a pantalla completa con imagen y créditos, y más volumen en la música.
+- **Hacer:** las frases se reparten con una "bolsa" que no repite ninguna hasta usarlas todas (8 chistes para 8 recuerdos); menú con portada 3D en vivo (Kevin y un corazón roto de vóxeles) y créditos fijos al pie; música de 0.07 a 0.18 de volumen.
+- **Verificar:** 2 pruebas nuevas garantizan que no se repiten chistes (14 en total); capturas en 3 tamaños de pantalla sin desplazamiento horizontal.
+- **Actuar:** las capturas mostraron que en escritorio los créditos quedaban fuera de la pantalla y que en el celular el título tapaba a Kevin; se fijaron los créditos al pie y se reencuadró la cámara.
+
+### Ciclo 7: validación con usuarios (para completar por el equipo)
 - **Planificar:** probar con 5 a 10 compañeros, cada uno con un código (P01, P02…).
 - **Hacer:** cada participante juega una partida en cada modo y responde la encuesta SUS.
 - **Verificar:** descargar el CSV desde "Mi progreso" y comparar amplitud, aciertos, tiempos y puntaje SUS promedio.
