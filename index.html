@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mnemo y las puertas de Corsi</title>
+  <meta name="description" content="Juego 3D pixelado para entrenar la memoria visoespacial con la prueba de bloques de Corsi.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%231c1830'/><rect x='2' y='1' width='4' height='6' fill='%237a4a2a'/><rect x='5' y='4' width='1' height='1' fill='%23f6d365'/><rect x='1' y='0' width='6' height='1' fill='%238ff0e2'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Sala del juego con bloques de piedra"></canvas>
+
+  <!-- HUD durante la partida -->
+  <div id="hud" class="hud" hidden>
+    <div class="hud-top">
+      <div class="chip">
+        <span class="chip-label">Sala</span>
+        <strong id="hud-room">1</strong>
+        <span class="chip-sub" id="hud-room-name">Vestíbulo de musgo</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Bloques</span>
+        <strong id="hud-span">2</strong>
+        <span class="chip-sub" id="hud-mode">orden directo</span>
+      </div>
+      <div class="hud-actions">
+        <div class="attempts" id="hud-attempts" role="img" aria-label="Intentos restantes"></div>
+        <button class="icon-btn" id="btn-mute" type="button" aria-pressed="false" aria-label="Silenciar sonido">Sonido</button>
+        <button class="icon-btn" id="btn-exit" type="button">Salir</button>
+      </div>
+    </div>
+    <div class="hud-bottom">
+      <p id="hud-msg" class="msg" role="status" aria-live="polite">Observa la secuencia</p>
+      <div id="pips" class="pips" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- Pantalla de inicio -->
+  <section id="screen-title" class="screen">
+    <div class="panel">
+      <h1 class="title">Mnemo<span>y las puertas de Corsi</span></h1>
+      <p class="lead">Cada sala guarda una puerta cerrada. Mira qué bloques se encienden, tócalos en el orden correcto y la puerta se abrirá.</p>
+      <div class="actions">
+        <button class="btn btn-primary" type="button" data-mode="directo">Jugar en orden directo</button>
+        <button class="btn" type="button" data-mode="inverso">Jugar en orden inverso</button>
+      </div>
+      <details class="how">
+        <summary>Cómo se juega</summary>
+        <ol>
+          <li>Los bloques de piedra se encienden uno por uno, a un bloque por segundo.</li>
+          <li>Cuando aparezca "Tu turno", toca los mismos bloques. En orden inverso, empieza por el último.</li>
+          <li>Si aciertas, la puerta se abre y Mnemo pasa a una sala con un bloque más.</li>
+          <li>Tienes 2 intentos por sala. Si fallas ambos, el viaje termina y ves tu amplitud de memoria.</li>
+        </ol>
+      </details>
+      <div class="records" id="records"></div>
+    </div>
+  </section>
+
+  <!-- Pantalla final -->
+  <section id="screen-over" class="screen" hidden>
+    <div class="panel panel-result">
+      <p class="result-kicker" id="over-kicker">Fin del viaje</p>
+      <div class="result-span">
+        <strong id="over-span">0</strong>
+        <span>bloques recordados</span>
+      </div>
+      <p class="result-rating" id="over-rating"></p>
+      <p class="result-record" id="over-record" hidden>Nuevo récord en este modo</p>
+      <dl class="result-stats">
+        <div><dt>Salas superadas</dt><dd id="over-rooms">0</dd></div>
+        <div><dt>Aciertos</dt><dd id="over-accuracy">0%</dd></div>
+        <div><dt>Respuesta media</dt><dd id="over-rt">0 s</dd></div>
+      </dl>
+      <div class="actions">
+        <button class="btn btn-primary" type="button" id="btn-again">Jugar otra vez</button>
+        <button class="btn" type="button" id="btn-home">Volver al inicio</button>
+      </div>
+      <button class="link-btn" type="button" id="btn-csv">Descargar mis datos (CSV)</button>
+    </div>
+  </section>
+
+  <noscript><p class="noscript">Este juego necesita JavaScript activado.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

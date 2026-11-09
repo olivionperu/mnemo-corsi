@@ -1,0 +1,11 @@
+{
+  "name": "mnemo-corsi",
+  "version": "1.0.0",
+  "description": "Juego 3D pixelado basado en la prueba de bloques de Corsi para entrenar la memoria visoespacial.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/corsi.test.js",
+    "start": "python -m http.server 5190"
+  }
+}
