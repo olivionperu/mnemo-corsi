@@ -1,66 +1,66 @@
 // Narrativa: Kevin, programador junior, recorre los recuerdos de su ex.
-// Cada sala es un recuerdo y cada recuerdo guarda una frase de ELLA.
+// Cada sala es un recuerdo y cada recuerdo guarda una de las típicas excusas de ELLA.
 
 export const GAME_TITLE = '404: Amor no encontrado';
 export const HERO = 'Kevin';
 
 export const MEMORIES = [
   {
-    place: 'La primera cita',
-    lie: 'Me encanta que seas programador.',
-    truth: 'Kevin aún no sabía que eso incluía arreglarle la impresora a toda su familia.',
-  },
-  {
-    place: 'El chat de las 3 a.m.',
+    place: 'La primera sospecha',
     lie: 'Solo es un amigo.',
-    truth: 'El "amigo" tenía su propio álbum de fotos. Con stickers.',
+    truth: 'El "amigo" le escribía "buenos días, preciosa" todos los días a las 7:00. Con cron job.',
   },
   {
-    place: 'Su cumpleaños',
-    lie: 'Ya estoy lista en 5 minutos.',
-    truth: 'La reserva del restaurante expiró. Dos veces.',
+    place: 'La foto con "el primo"',
+    lie: 'Es mi primo.',
+    truth: 'Kevin conoce a toda su familia. Ese primo no sale en ninguna foto de Navidad.',
   },
   {
-    place: 'La salida con sus amigas',
-    lie: 'Te escribo cuando llegue.',
-    truth: 'Según el último reporte, sigue en camino.',
+    place: 'La noche sin respuesta',
+    lie: 'Me quedé sin batería.',
+    truth: 'Pero sí tuvo batería para subir 14 historias esa noche.',
   },
   {
-    place: 'La pelea por nada',
-    lie: 'No estoy enojada.',
-    truth: 'Lo escribió con punto final. Y los puntos finales no mienten.',
+    place: 'El sábado con "las amigas"',
+    lie: 'Estoy en casa de mi amiga.',
+    truth: 'La amiga estaba en el gimnasio. Lo subió a sus historias.',
   },
   {
-    place: 'El "tenemos que hablar"',
-    lie: 'No eres tú, soy yo.',
-    truth: 'Kevin revisó el git blame. Decía "Kevin".',
+    place: 'El chat que se quedó abierto',
+    lie: 'No es lo que parece.',
+    truth: 'Era exactamente lo que parecía. Hasta el compilador lo detectó.',
   },
   {
-    place: 'Las historias de Instagram',
-    lie: 'Necesito tiempo para mí.',
-    truth: 'Su "tiempo para mí" tuvo 1,2 k vistas y un tal Brayan en todas las fotos.',
+    place: 'El WhatsApp "hackeado"',
+    lie: 'Me hackearon el WhatsApp.',
+    truth: 'Kevin es programador y revisó. Ningún hacker borra solo los chats con Brayan.',
   },
   {
-    place: 'El servidor del olvido',
-    lie: 'Siempre vamos a ser amigos.',
-    truth: 'Kevin fue bloqueado en 3 plataformas. Récord personal.',
+    place: 'El "hermano" de la universidad',
+    lie: 'Él es como un hermano para mí.',
+    truth: 'Un hermano que la llamaba "bebé" a las 2 a.m.',
+  },
+  {
+    place: 'La última conversación',
+    lie: 'Tú eres el único.',
+    truth: 'Era verdad: el único que no sabía nada.',
   },
 ];
 
 export const SUCCESS_LINES = [
   'Commit exitoso: una mentira menos.',
-  'Build passing. El corazón sigue en mantenimiento.',
-  'Merge sin conflictos. Ojalá la relación hubiera sido así.',
-  'Test aprobado. Ella nunca aprobó ninguno de los tuyos.',
-  'La puerta se abrió. Ella nunca abrió tus mensajes.',
+  'La puerta se abrió. Su celular, nunca.',
+  'Build passing. Brayan sigue en los logs.',
+  'Merge sin conflictos. Todo lo contrario a su historial de chats.',
+  'Test aprobado. Ella también "salía con las chicas".',
 ];
 
 export const ERROR_LINES = [
   'Error 404: recuerdo no encontrado.',
   'Le creíste otra vez, ¿no?',
-  'Ese no era. Como Brayan, que tampoco "era nada".',
+  'Ese no era. Como "el primo", que tampoco era primo.',
   'Segmentation fault emocional.',
-  'Hasta ella recordaba mejor sus excusas.',
+  'Hasta ella recordaba mejor sus coartadas.',
 ];
 
 export const PRACTICE = {
@@ -73,13 +73,13 @@ export const PRACTICE = {
 export const ENDINGS = {
   win: {
     kicker: 'Kevin cerró la última puerta',
-    text: 'Hizo git push --force al olvido y siguió adelante. Ya no recuerda a ELLA, pero sí todas sus mentiras.',
+    text: 'Hizo git push --force al olvido y siguió adelante. Ya no recuerda a ELLA, pero sí cada una de sus coartadas.',
   },
   lose: {
     kicker: 'Kevin se quedó atrapado en un recuerdo',
-    text: 'Le faltó memoria para cerrar esta puerta. Mañana puede intentarlo otra vez.',
+    text: 'Le faltó memoria para cerrar esta puerta. Ella contaba con eso. Mañana puede intentarlo otra vez.',
   },
-  zero: 'Ni la primera cita pudo superar. Respira y prueba otra vez con calma.',
+  zero: 'Ni la primera sospecha pudo superar. Respira y prueba otra vez con calma.',
 };
 
 export const pick = (list) => list[Math.floor(Math.random() * list.length)];

@@ -4,7 +4,7 @@ Juego web 3D con estética pixel art para entrenar la **memoria de trabajo visoe
 
 **Jugar en línea:** https://olivionperu.github.io/mnemo-corsi/
 
-Kevin, programador junior, quedó en visto para siempre. Para olvidarla, primero tiene que recordar todas sus mentiras. Cada sala es un recuerdo de la relación con una frase de ELLA ("Solo es un amigo", "Ya estoy lista en 5 minutos"…). En cada sala, unas cajas de recuerdos se encienden en secuencia. Si el jugador las toca en el orden correcto, la puerta se abre y Kevin avanza al siguiente recuerdo, donde la secuencia tiene una caja más.
+Kevin, programador junior, quedó en visto para siempre. Para olvidarla, primero tiene que recordar todas sus mentiras. Cada sala es un recuerdo de la relación con una de las típicas excusas de ELLA ("Solo es un amigo", "Es mi primo", "Me quedé sin batería", "Me hackearon el WhatsApp"…). En cada sala, unas cajas de recuerdos se encienden en secuencia. Si el jugador las toca en el orden correcto, la puerta se abre y Kevin avanza al siguiente recuerdo, donde la secuencia tiene una caja más.
 
 ## Cómo se juega
 
