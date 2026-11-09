@@ -86,7 +86,7 @@ const MELODY = [ // una nota por negra, -1 = silencio
   [76, 74, 72, 71], [72, -1, 69, -1], [67, 69, 72, 74], [71, -1, -1, -1],
 ];
 const EIGHTH = 60 / 84 / 2;
-const MUSIC_VOLUME = 0.07;
+const MUSIC_VOLUME = 0.18;
 
 let musicGain = null;
 let musicTimer = 0;

@@ -4,6 +4,8 @@ Juego web 3D con estética pixel art para entrenar la **memoria de trabajo visoe
 
 **Jugar en línea:** https://olivionperu.github.io/mnemo-corsi/
 
+**Creado por:** Olivera Novoa, Pedro Joaquin (código U22222753), Universidad Tecnológica del Perú.
+
 Kevin, programador junior, quedó en visto para siempre. Para olvidarla, primero tiene que recordar todas sus mentiras. Cada sala es un recuerdo de la relación con una de las típicas excusas de ELLA ("Solo es un amigo", "Es mi primo", "Me quedé sin batería", "Me hackearon el WhatsApp"…). En cada sala, unas cajas de recuerdos se encienden en secuencia. Si el jugador las toca en el orden correcto, la puerta se abre y Kevin avanza al siguiente recuerdo, donde la secuencia tiene una caja más.
 
 ## Cómo se juega

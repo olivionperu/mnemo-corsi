@@ -47,12 +47,16 @@ export const MEMORIES = [
   },
 ];
 
+// 8 frases para 8 recuerdos: con makeBag ninguna se repite dentro de una partida.
 export const SUCCESS_LINES = [
   'Commit exitoso: una mentira menos.',
   'La puerta se abrió. Su celular, nunca.',
   'Build passing. Brayan sigue en los logs.',
   'Merge sin conflictos. Todo lo contrario a su historial de chats.',
-  'Test aprobado. Ella también "salía con las chicas".',
+  'Bug encontrado y corregido. Se llamaba Brayan.',
+  'Deploy exitoso. Kevin 1, excusas 0.',
+  'Memoria intacta. Su "primo" no puede decir lo mismo.',
+  'Acceso concedido. Ella nunca te dio la contraseña de su celular.',
 ];
 
 export const ERROR_LINES = [
@@ -101,3 +105,22 @@ export const ENDINGS = {
 };
 
 export const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+// "Bolsa" de frases: las entrega en orden aleatorio sin repetir ninguna hasta usarlas
+// todas, y evita que la última de una vuelta sea la primera de la siguiente.
+export function makeBag(list, rng = Math.random) {
+  let bag = [];
+  let last;
+  return function next() {
+    if (!bag.length) {
+      bag = [...list];
+      for (let i = bag.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [bag[i], bag[j]] = [bag[j], bag[i]];
+      }
+      if (bag.length > 1 && bag[0] === last) bag.push(bag.shift());
+    }
+    last = bag.shift();
+    return last;
+  };
+}

@@ -6,7 +6,7 @@ import {
   generateLayout, spanRating, summarizeTrials, BLOCK_COUNT, START_SPAN, MAX_SPAN,
 } from '../js/corsi.js';
 import { susScore, susLabel } from '../js/sus.js';
-import { MEMORIES } from '../js/story.js';
+import { MEMORIES, SUCCESS_LINES, makeBag } from '../js/story.js';
 
 test('la secuencia tiene la longitud pedida y no repite bloques', () => {
   const rng = createRng(42);
@@ -81,6 +81,24 @@ test('SUS: etiquetas de interpretación', () => {
   assert.equal(susLabel(75), 'Buena');
   assert.equal(susLabel(60), 'Aceptable');
   assert.equal(susLabel(40), 'Necesita mejoras');
+});
+
+test('los chistes de acierto no se repiten en una partida de 8 recuerdos', () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const next = makeBag(SUCCESS_LINES, createRng(seed));
+    const seen = Array.from({ length: MEMORIES.length }, () => next());
+    assert.equal(new Set(seen).size, MEMORIES.length);
+  }
+});
+
+test('la bolsa nunca entrega dos frases iguales seguidas, ni entre vueltas', () => {
+  const next = makeBag(['a', 'b', 'c'], createRng(3));
+  let prev = next();
+  for (let i = 0; i < 300; i++) {
+    const cur = next();
+    assert.notEqual(cur, prev);
+    prev = cur;
+  }
 });
 
 test('hay un recuerdo por cada sala del juego', () => {

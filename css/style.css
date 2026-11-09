@@ -167,6 +167,41 @@ button, input { font: inherit; color: inherit; }
   overflow-y: auto;
 }
 
+/* ---------- menú principal a pantalla completa ---------- */
+.screen-menu {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  padding: 0;
+  background: linear-gradient(90deg, rgba(14, 10, 20, 0.95) 0%, rgba(14, 10, 20, 0.82) 34%, rgba(14, 10, 20, 0) 62%);
+}
+.menu {
+  width: min(540px, 100%);
+  padding: clamp(24px, 5vh, 56px) clamp(20px, 5vw, 72px) 24px;
+}
+.menu .title { font-size: clamp(4rem, 9vw, 6.5rem); }
+.menu .title-sub { font-size: clamp(1.5rem, 3.4vw, 2.2rem); }
+.menu .lead-small { display: none; }
+.menu .actions { flex-direction: row; flex-wrap: wrap; }
+.menu .actions .btn { flex: 1 1 200px; text-align: center; }
+.credits {
+  position: sticky; /* siempre visible al pie del menú, aunque se haga scroll */
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 28px;
+  padding: 14px clamp(20px, 5vw, 72px) max(14px, env(safe-area-inset-bottom));
+  background: rgba(14, 10, 20, 0.92);
+  border-top: 4px solid var(--line);
+  font-size: 0.95rem;
+  color: var(--ink-dim);
+}
+.credits p { margin: 0; }
+.credits strong { color: var(--gold); font-weight: 700; }
+.credits-uni { margin-left: auto !important; color: var(--ink); font-weight: 500; }
+
 .panel {
   width: min(470px, 100%);
   background: var(--stone);
@@ -632,6 +667,18 @@ button, input { font: inherit; color: inherit; }
     padding: 16px;
   }
   .panel { padding: 20px; }
+  /* En el celular, Kevin y el corazón quedan arriba y el menú debajo */
+  .screen-menu {
+    display: block;
+    padding: 0;
+    background: linear-gradient(180deg, rgba(14, 10, 20, 0) 0%, rgba(14, 10, 20, 0) 26vh, rgba(14, 10, 20, 0.9) 40vh, rgba(14, 10, 20, 0.97) 100%);
+    background-attachment: local; /* el degradado acompaña al contenido al hacer scroll */
+  }
+  .menu { padding: 38vh 20px 20px; width: 100%; }
+  .menu .title { font-size: 4.2rem; }
+  .menu .title-sub { font-size: 1.5rem; }
+  .credits { flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 20px max(12px, env(safe-area-inset-bottom)); font-size: 0.82rem; background: var(--night); }
+  .credits-uni { margin-left: 0 !important; }
   .chip { min-width: 0; padding: 6px 10px; }
   .chip strong { font-size: 1.4rem; }
   .chip-sub { display: none; }

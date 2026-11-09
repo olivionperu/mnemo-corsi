@@ -9,7 +9,7 @@ import { createPlayer } from './player.js';
 import { Particles, Shake } from './fx.js';
 import { sfx, music, unlockAudio, isMuted, setMuted } from './audio.js';
 import { tween, wait, updateTweens, clearTweens, linear, easeInOut } from './tween.js';
-import { MEMORIES, SUCCESS_LINES, ERROR_LINES, CHAOS_MESSAGES, PRACTICE, ENDINGS, pick } from './story.js';
+import { MEMORIES, SUCCESS_LINES, ERROR_LINES, CHAOS_MESSAGES, PRACTICE, ENDINGS, pick, makeBag } from './story.js';
 import { SUS_ITEMS, susScore, susLabel } from './sus.js';
 import { Cinema } from './cinematics.js';
 import * as stats from './stats.js';
@@ -50,6 +50,20 @@ const cam = { zoom: 0, mode: 'normal', angle: 0 };
 const camTarget = new THREE.Vector3();
 
 function placeCamera(z) {
+  if (cam.mode === 'menu') {
+    // Toma de portada: Kevin en primer plano, a la derecha en escritorio y arriba en el celular.
+    const k = player.group.position;
+    const portrait = camera.aspect < 0.85;
+    const a = Math.sin(clock.elapsedTime * 0.25) * 0.35 - 0.15;
+    const r = portrait ? 7.4 : 5.6;
+    camera.position.set(k.x + Math.sin(a) * r, portrait ? 3.2 : 2.2, k.z + Math.cos(a) * r);
+    const shift = portrait ? 0 : 2.6; // desplaza el encuadre para dejar sitio al menú
+    camTarget.set(k.x - Math.cos(a) * shift, portrait ? -1.5 : 1.6, k.z + Math.sin(a) * shift);
+    camera.lookAt(camTarget);
+    sun.position.set(k.x - 6, 15, k.z + 8);
+    sun.target.position.set(k.x, 0, k.z);
+    return;
+  }
   if (cam.mode === 'orbit') {
     const k = player.group.position;
     const r = camera.aspect < 0.85 ? 6.5 : 4.6;
@@ -101,6 +115,43 @@ const hintArrow = new THREE.Group();
   hintArrow.scale.setScalar(1.6);
   hintArrow.visible = false;
   scene.add(hintArrow);
+}
+
+// Corazón roto gigante del menú: dos mitades de vóxeles que se separan y se juntan.
+const menuHeart = new THREE.Group();
+{
+  const rows = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
+  const crack = new Set(['3,0', '2,1', '3,2', '3,3', '4,4']);
+  const geo = new THREE.BoxGeometry(0.19, 0.19, 0.19);
+  const red = new THREE.MeshBasicMaterial({ color: 0xc8405e });
+  const pink = new THREE.MeshBasicMaterial({ color: 0xff7eb6 });
+  const halves = [new THREE.Group(), new THREE.Group()];
+  rows.forEach((row, y) => [...row].forEach((bit, x) => {
+    if (bit !== '1' || crack.has(`${x},${y}`)) return;
+    const m = new THREE.Mesh(geo, y === 1 && x === 1 ? pink : red);
+    m.position.set((x - 3) * 0.19, (2.5 - y) * 0.19, 0);
+    // la grieta va en zigzag: lo que queda a su izquierda es la mitad izquierda
+    const crackX = [3, 2, 3, 3, 4, 4][y];
+    halves[x < crackX ? 0 : 1].add(m);
+  }));
+  menuHeart.add(...halves);
+  menuHeart.userData.halves = halves;
+  menuHeart.visible = false;
+  scene.add(menuHeart);
+}
+
+function updateMenuHeart(t) {
+  menuHeart.visible = cam.mode === 'menu';
+  if (!menuHeart.visible) return;
+  const k = player.group.position;
+  menuHeart.position.set(k.x - 0.4, 2.75 + Math.sin(t * 1.6) * 0.1, k.z - 1.2);
+  menuHeart.rotation.y = Math.sin(t * 0.5) * 0.3;
+  const gap = 0.06 + (Math.sin(t * 1.3) * 0.5 + 0.5) * 0.12;
+  const [left, right] = menuHeart.userData.halves;
+  left.position.x = -gap;
+  right.position.x = gap;
+  left.rotation.z = gap * 0.5;
+  right.rotation.z = -gap * 0.5;
 }
 
 function buildRoom(index) {
@@ -227,7 +278,7 @@ function showTitle() {
   clearTweens();
   game.state = 'title';
   cinema.abort();
-  Object.assign(cam, { zoom: 0, mode: 'normal' });
+  Object.assign(cam, { zoom: 0, mode: 'menu' });
   hideQuip();
   clearNotifs();
   hideThought();
@@ -250,6 +301,7 @@ function startGame(mode) {
   hideQuip();
   clearNotifs();
   hideThought();
+  shuffleLines();
   resetWorld(0);
   game.introShown = -1;
   game.participant = $('participant').value.trim();
@@ -372,12 +424,18 @@ function chaosSlots(length) {
   return slots;
 }
 
-let lastChaos = '';
+// Frases sin repetición: cada partida nueva vuelve a barajar.
+const lines = {};
+function shuffleLines() {
+  lines.success = makeBag(SUCCESS_LINES);
+  lines.error = makeBag(ERROR_LINES);
+  lines.chaos = makeBag(CHAOS_MESSAGES);
+}
+shuffleLines();
+
 function chaosNotify() {
   const box = $('notifs');
-  let text = pick(CHAOS_MESSAGES);
-  if (text === lastChaos) text = pick(CHAOS_MESSAGES);
-  lastChaos = text;
+  const text = lines.chaos();
   const n = document.createElement('div');
   n.className = 'notif';
   n.innerHTML = '<span class="avatar"></span><strong>ELLA <small>ahora</small></strong><p></p>';
@@ -531,7 +589,7 @@ async function finishTrial(correct) {
     if (!alive(token)) return;
     game.room.setAllBlocks('win');
     setMessage('¡Correcto!', 'ok');
-    showQuip(pick(SUCCESS_LINES), 'ok');
+    showQuip(lines.success(), 'ok');
     think('!', 1.4);
     await wait(1.2);
     if (!alive(token)) return;
@@ -555,7 +613,7 @@ async function finishTrial(correct) {
   shake.kick(0.35);
   player.shake();
   setMessage('Ese no era', 'bad');
-  showQuip(pick(ERROR_LINES), 'bad');
+  showQuip(lines.error(), 'bad');
   think('heart', 2);
   await wait(1.3);
   if (!alive(token)) return;
@@ -911,6 +969,7 @@ function frame() {
   // La música baja mientras el jugador memoriza y responde.
   music.duck(game.state === 'showing' || game.state === 'input' ? 0.2 : 1);
   updateThought();
+  updateMenuHeart(clock.elapsedTime);
   renderer.render(scene, camera);
   if (firstFrame) {
     firstFrame = false;
